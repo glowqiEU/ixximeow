@@ -13,8 +13,8 @@ class Orchestrator:
 
         result = Result(
             task_id=task.id or task.title,
-            success=True,
-            summary=f"task created: {task.title}",
+            success=False,
+            summary="task created; execution not yet performed",
         )
 
         return decision, task, result

@@ -6,7 +6,6 @@ from core.orchestrator import Orchestrator
 
 
 class TestDecisionEngine(unittest.TestCase):
-
     def test_chooses_highest_priority(self):
         options = [
             Decision("test", "low", "low priority", priority=1),
@@ -21,8 +20,7 @@ class TestDecisionEngine(unittest.TestCase):
 
 
 class TestOrchestrator(unittest.TestCase):
-
-    def test_decision_creates_task_and_result(self):
+    def test_decision_creates_pending_task(self):
         options = [
             Decision("test", "first", "first option", priority=1),
             Decision("test", "best", "best option", priority=10),
@@ -32,8 +30,11 @@ class TestOrchestrator(unittest.TestCase):
 
         self.assertEqual(decision.action, "best")
         self.assertEqual(task.title, "best")
-        self.assertTrue(result.success)
-        self.assertEqual(result.summary, "task created: best")
+        self.assertFalse(result.success)
+        self.assertEqual(
+            result.summary,
+            "task created; execution not yet performed",
+        )
 
 
 if __name__ == "__main__":
