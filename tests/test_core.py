@@ -27,11 +27,11 @@ class TestExecutor(unittest.TestCase):
     def test_execute_task_returns_result(self):
         task = Task(title="test task", id="task-1")
 
-        result = execute_task(task)
+        task, result = execute_task(task)
 
         self.assertEqual(result.task_id, "task-1")
-        self.assertFalse(result.success)
-        self.assertEqual(result.summary, "execution not implemented yet")
+        self.assertTrue(result.success)
+        self.assertEqual(result.summary, "task execution completed")
 
 
 class TestOrchestrator(unittest.TestCase):
