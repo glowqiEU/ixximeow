@@ -6,7 +6,7 @@ from .state import SystemState
 
 @dataclass
 class AgentContext:
-    goal: Optional[str]
+    goal_id: Optional[str]
     task: Optional[str]
     last_decision_id: Optional[str]
     last_result_id: Optional[str]
@@ -14,7 +14,7 @@ class AgentContext:
     @classmethod
     def from_state(cls, state: SystemState) -> "AgentContext":
         return cls(
-            goal=state.active_goal,
+            goal_id=state.active_goal_id,
             task=state.active_task,
             last_decision_id=state.last_decision_id,
             last_result_id=state.last_result_id,
