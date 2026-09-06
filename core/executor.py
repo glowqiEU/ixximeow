@@ -1,6 +1,6 @@
 from .models import Task, Result
 from .task_lifecycle import transition_task
-from .result_store import ensure_result_id, load_results, save_results
+from .result_store import load_results, save_results
 
 
 def execute_task(task: Task) -> tuple[Task, Result]:
@@ -13,8 +13,6 @@ def execute_task(task: Task) -> tuple[Task, Result]:
             summary="task execution completed",
         )
 
-        result = ensure_result_id(result)
-
         task = transition_task(task, "completed")
 
     except Exception as exc:
@@ -24,7 +22,6 @@ def execute_task(task: Task) -> tuple[Task, Result]:
             summary=f"task execution failed: {exc}",
         )
 
-        result = ensure_result_id(result)
         task = transition_task(task, "failed")
 
     results = load_results()
