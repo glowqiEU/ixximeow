@@ -5,6 +5,8 @@ from .state_manager import apply_decision
 from .state_store import save_state
 from .task_store import ensure_task_id, load_tasks, save_tasks
 from .executor import execute_task
+from .history_store import append_event
+from .history import HistoryEvent
 from .models import Task
 from .state import SystemState
 
@@ -43,5 +45,7 @@ class Orchestrator:
         )
 
         save_state(state)
+
+        append_event(HistoryEvent(event_type="task_executed", summary=result.summary, decision_id=decision.id, task_id=task.id, result_id=result.id))
 
         return decision, task, result
