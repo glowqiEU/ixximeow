@@ -5,7 +5,7 @@ from typing import Optional
 
 @dataclass
 class SystemState:
-    active_goal: Optional[str] = None
+    active_goal_id: Optional[str] = None
     active_task: Optional[str] = None
     last_decision_id: Optional[str] = None
     last_result_id: Optional[str] = None
