@@ -71,7 +71,6 @@ make the system survive restarts.
 - result store
 - history store
 - state store
-- persistence utilities
 
 ### status
 in progress
