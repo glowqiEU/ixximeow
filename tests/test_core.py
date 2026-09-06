@@ -45,3 +45,20 @@ class TestOrchestrator(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+from core.goal_store import get_goal, load_goals
+
+
+class TestGoalStore(unittest.TestCase):
+    def test_loads_existing_goal(self):
+        goals = load_goals()
+
+        self.assertTrue(goals)
+        self.assertEqual(goals[0].title, "grow ixximeow")
+
+    def test_get_goal_returns_matching_goal(self):
+        goals = load_goals()
+        goal = get_goal(goals[0].id)
+
+        self.assertIsNotNone(goal)
+        self.assertEqual(goal.title, "grow ixximeow")
