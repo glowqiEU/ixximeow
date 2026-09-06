@@ -6,10 +6,10 @@ from .state import SystemState
 
 @dataclass
 class AgentContext:
-    goal_id: Optional[str]
-    task: Optional[str]
-    last_decision_id: Optional[str]
-    last_result_id: Optional[str]
+    goal_id: Optional[str] = None
+    task: Optional[str] = None
+    last_decision_id: Optional[str] = None
+    last_result_id: Optional[str] = None
 
     @classmethod
     def from_state(cls, state: SystemState) -> "AgentContext":
