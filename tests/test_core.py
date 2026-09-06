@@ -3,6 +3,8 @@ import unittest
 from core.models import Decision
 from core.decision_engine import choose_decision
 from core.orchestrator import Orchestrator
+from core.executor import execute_task
+from core.models import Task
 
 
 class TestDecisionEngine(unittest.TestCase):
@@ -20,9 +22,21 @@ class TestDecisionEngine(unittest.TestCase):
         self.assertIsNotNone(decision.id)
 
 
+
+class TestExecutor(unittest.TestCase):
+    def test_execute_task_returns_result(self):
+        task = Task(title="test task", id="task-1")
+
+        result = execute_task(task)
+
+        self.assertEqual(result.task_id, "task-1")
+        self.assertFalse(result.success)
+        self.assertEqual(result.summary, "execution not implemented yet")
+
+
 class TestOrchestrator(unittest.TestCase):
     def test_run_produces_decision(self):
-        decision, task = Orchestrator().run()
+        decision, task, result = Orchestrator().run()
 
         self.assertIsNotNone(decision)
         self.assertIsNotNone(decision.id)
