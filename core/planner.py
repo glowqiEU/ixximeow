@@ -8,17 +8,17 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
     if context.task:
         candidates.append(
             Decision(
-                objective=context.goal or "continue current goal",
+                objective=context.goal_id or "continue current goal",
                 action=f"continue: {context.task}",
                 reason="an active task already exists",
                 priority=10,
             )
         )
 
-    if context.goal:
+    if context.goal_id:
         candidates.append(
             Decision(
-                objective=context.goal,
+                objective=context.goal_id,
                 action="review next useful action",
                 reason="an active goal exists without requiring a specific task",
                 priority=5,

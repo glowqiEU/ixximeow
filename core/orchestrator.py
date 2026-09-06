@@ -4,8 +4,8 @@ from .planner import generate_candidates
 from .state_manager import apply_decision
 from .state_store import save_state
 from .task_store import ensure_task_id, load_tasks, save_tasks
-from .result_store import ensure_result_id, load_results, save_results
-from .models import Result, Task
+from .executor import execute_task
+from .models import Task
 from .state import SystemState
 
 
@@ -22,22 +22,12 @@ class Orchestrator:
             title=decision.action,
             decision_id=decision.id,
         )
-
         task = ensure_task_id(task)
+
         tasks.append(task)
         save_tasks(tasks)
 
-        result = Result(
-            task_id=task.id,
-            success=False,
-            summary="task created; execution not yet performed",
-        )
-
-        result = ensure_result_id(result)
-
-        results = load_results()
-        results.append(result)
-        save_results(results)
+        task, result = execute_task(task)
 
         state = SystemState(
             active_goal_id=context.goal_id,
