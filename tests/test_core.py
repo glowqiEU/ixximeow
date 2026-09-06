@@ -22,7 +22,7 @@ class TestDecisionEngine(unittest.TestCase):
 
 class TestOrchestrator(unittest.TestCase):
     def test_run_produces_decision(self):
-        decision = Orchestrator().run()
+        decision, task = Orchestrator().run()
 
         self.assertIsNotNone(decision)
         self.assertIsNotNone(decision.id)
