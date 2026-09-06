@@ -8,34 +8,26 @@ from core.orchestrator import Orchestrator
 class TestDecisionEngine(unittest.TestCase):
     def test_chooses_highest_priority(self):
         options = [
-            Decision("test", "low", "low priority", priority=1),
-            Decision("test", "high", "high priority", priority=10),
-            Decision("test", "medium", "medium priority", priority=5),
+            Decision('test', 'low', 'low priority', priority=1),
+            Decision('test', 'high', 'high priority', priority=10),
+            Decision('test', 'medium', 'medium priority', priority=5),
         ]
 
         decision = choose_decision(options)
 
-        self.assertEqual(decision.action, "high")
+        self.assertEqual(decision.action, 'high')
         self.assertEqual(decision.priority, 10)
+        self.assertIsNotNone(decision.id)
 
 
 class TestOrchestrator(unittest.TestCase):
-    def test_decision_creates_pending_task(self):
-        options = [
-            Decision("test", "first", "first option", priority=1),
-            Decision("test", "best", "best option", priority=10),
-        ]
+    def test_run_produces_decision(self):
+        decision = Orchestrator().run()
 
-        decision, task, result = Orchestrator().run(options)
-
-        self.assertEqual(decision.action, "best")
-        self.assertEqual(task.title, "best")
-        self.assertFalse(result.success)
-        self.assertEqual(
-            result.summary,
-            "task created; execution not yet performed",
-        )
+        self.assertIsNotNone(decision)
+        self.assertIsNotNone(decision.id)
+        self.assertEqual(decision.status, 'proposed')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
