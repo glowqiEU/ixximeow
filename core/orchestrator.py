@@ -14,7 +14,7 @@ from .approval_store import load_approvals, save_approvals
 
 class Orchestrator:
     def run(self):
-        context, _ = build_context()
+        context = build_context()
 
         candidates = generate_candidates(context)
         decision = choose_decision(candidates)

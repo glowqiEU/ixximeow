@@ -1,45 +1,47 @@
 import unittest
-from unittest.mock import patch
 
-from core.context_builder import build_context
+from core.context_builder import AgentContext, build_context
 from core.state import SystemState
+from core.memory import Memory
 from core.history import HistoryEvent
+from core.models import Task
 
 
 class TestContextBuilder(unittest.TestCase):
-    @patch("core.context_builder.load_events")
-    @patch("core.context_builder.load_state")
-    def test_build_context_restores_state_and_history(
-        self,
-        mock_load_state,
-        mock_load_events,
-    ):
-        mock_load_state.return_value = SystemState(
-            active_goal_id="goal-123",
-            active_task="build agent",
-            last_decision_id="decision-123",
-            last_result_id="result-123",
-        )
 
+    def test_build_context_collects_system_context(self):
+        state = SystemState(active_goal_id="goal-1")
+        memories = [
+            Memory(
+                content="flash photos perform better",
+                source="observed_result",
+                confidence=0.8,
+            )
+        ]
         history = [
             HistoryEvent(
                 event_type="task_executed",
-                summary="task execution completed",
-                decision_id="decision-123",
-                task_id="task-123",
-                result_id="result-123",
+                summary="posted photo",
             )
         ]
-        mock_load_events.return_value = history
+        tasks = [
+            Task(
+                title="post photo",
+            )
+        ]
 
-        context, recent_history = build_context(history_limit=10)
+        context = build_context(
+            state=state,
+            memories=memories,
+            history=history,
+            tasks=tasks,
+        )
 
-        self.assertEqual(context.goal_id, "goal-123")
-        self.assertEqual(context.task, "build agent")
-        self.assertEqual(context.last_decision_id, "decision-123")
-        self.assertEqual(context.last_result_id, "result-123")
-        self.assertEqual(recent_history, history)
-        mock_load_events.assert_called_once_with(limit=10)
+        self.assertIsInstance(context, AgentContext)
+        self.assertEqual(context.state.active_goal_id, "goal-1")
+        self.assertEqual(len(context.memories), 1)
+        self.assertEqual(len(context.history), 1)
+        self.assertEqual(len(context.tasks), 1)
 
 
 if __name__ == "__main__":

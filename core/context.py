@@ -1,7 +1,10 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 from .state import SystemState
+from .memory import Memory
+from .history import HistoryEvent
+from .models import Task
 
 
 @dataclass
@@ -11,6 +14,11 @@ class AgentContext:
     last_decision_id: Optional[str] = None
     last_result_id: Optional[str] = None
 
+    state: Optional[SystemState] = None
+    memories: List[Memory] = field(default_factory=list)
+    history: List[HistoryEvent] = field(default_factory=list)
+    tasks: List[Task] = field(default_factory=list)
+
     @classmethod
     def from_state(cls, state: SystemState) -> "AgentContext":
         return cls(
@@ -18,4 +26,5 @@ class AgentContext:
             task=state.active_task,
             last_decision_id=state.last_decision_id,
             last_result_id=state.last_result_id,
+            state=state,
         )
