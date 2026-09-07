@@ -5,3 +5,6 @@ goals.json
 tasks.json
 
 approvals.json
+
+.venv/
+memory.json
