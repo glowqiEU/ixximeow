@@ -8,6 +8,8 @@ from .executor import execute_task
 from .history_store import append_event
 from .history import HistoryEvent
 from .models import Task
+from .approval_gate import check_approval
+from .approval_store import load_approvals, save_approvals
 
 
 class Orchestrator:
@@ -35,6 +37,28 @@ class Orchestrator:
             decision=decision,
             task=task,
         )
+
+        approval = check_approval(task)
+
+        if approval is not None:
+            task.status = "waiting_approval"
+
+            approvals = load_approvals()
+            approvals.append(approval)
+            save_approvals(approvals)
+
+            save_state(state)
+
+            append_event(
+                HistoryEvent(
+                    event_type="approval_requested",
+                    summary=approval.reason,
+                    decision_id=decision.id,
+                    task_id=task.id,
+                )
+            )
+
+            return decision, task, None
 
         task, result = execute_task(task)
 

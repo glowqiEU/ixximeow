@@ -3,7 +3,7 @@ from typing import Optional
 from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
-from .result_store import load_results, save_results
+from .result_store import ensure_result_id, load_results, save_results
 
 
 def execute_task(
