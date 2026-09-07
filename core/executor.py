@@ -1,9 +1,30 @@
+from typing import Optional
+
+from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
 from .result_store import load_results, save_results
 
 
-def execute_task(task: Task) -> tuple[Task, Result]:
+def execute_task(
+    task: Task,
+    approval: Optional[Approval] = None,
+) -> tuple[Task, Optional[Result]]:
+    if approval is not None:
+        if task.approval_id != approval.id:
+            raise ValueError("approval does not belong to task")
+
+        if approval.status == "pending":
+            task = transition_task(task, "waiting_approval")
+            return task, None
+
+        if approval.status == "rejected":
+            task = transition_task(task, "cancelled")
+            return task, None
+
+        if approval.status != "approved":
+            raise ValueError(f"invalid approval status: {approval.status}")
+
     task = transition_task(task, "running")
 
     try:

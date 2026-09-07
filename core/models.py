@@ -26,6 +26,7 @@ class Task:
     title: str
     status: str = "pending"
     decision_id: Optional[str] = None
+    approval_id: Optional[str] = None
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
