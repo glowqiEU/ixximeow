@@ -2,13 +2,12 @@ from .context_builder import build_context
 from .decision_engine import choose_decision
 from .planner import generate_candidates
 from .state_manager import apply_decision, apply_result
-from .state_store import save_state
+from .state_store import load_state, save_state
 from .task_store import ensure_task_id, load_tasks, save_tasks
 from .executor import execute_task
 from .history_store import append_event
 from .history import HistoryEvent
 from .models import Task
-from .state import SystemState
 
 
 class Orchestrator:
@@ -29,9 +28,7 @@ class Orchestrator:
         tasks.append(task)
         save_tasks(tasks)
 
-        state = SystemState(
-            active_goal_id=context.goal_id,
-        )
+        state = load_state()
 
         state = apply_decision(
             state=state,
