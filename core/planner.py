@@ -6,11 +6,19 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
     candidates = []
 
     if context.task:
+        reason = "an active task already exists"
+
+        if context.memories:
+            memory_summary = "; ".join(
+                memory.content for memory in context.memories
+            )
+            reason += f"; relevant memory: {memory_summary}"
+
         candidates.append(
             Decision(
                 objective=context.goal_id or "continue current goal",
                 action=f"continue: {context.task}",
-                reason="an active task already exists",
+                reason=reason,
                 priority=10,
             )
         )
