@@ -12,6 +12,27 @@ class TestTaskLifecycle(unittest.TestCase):
 
         self.assertEqual(task.status, "running")
 
+    def test_pending_to_waiting_approval(self):
+        task = Task(title="test")
+
+        transition_task(task, "waiting_approval")
+
+        self.assertEqual(task.status, "waiting_approval")
+
+    def test_waiting_approval_to_running(self):
+        task = Task(title="test", status="waiting_approval")
+
+        transition_task(task, "running")
+
+        self.assertEqual(task.status, "running")
+
+    def test_waiting_approval_to_cancelled(self):
+        task = Task(title="test", status="waiting_approval")
+
+        transition_task(task, "cancelled")
+
+        self.assertEqual(task.status, "cancelled")
+
     def test_running_to_completed(self):
         task = Task(title="test", status="running")
 
@@ -26,8 +47,48 @@ class TestTaskLifecycle(unittest.TestCase):
 
         self.assertEqual(task.status, "failed")
 
+    def test_running_to_blocked(self):
+        task = Task(title="test", status="running")
+
+        transition_task(task, "blocked")
+
+        self.assertEqual(task.status, "blocked")
+
+    def test_blocked_to_running(self):
+        task = Task(title="test", status="blocked")
+
+        transition_task(task, "running")
+
+        self.assertEqual(task.status, "running")
+
+    def test_failed_to_pending_for_retry(self):
+        task = Task(title="test", status="failed")
+
+        transition_task(task, "pending")
+
+        self.assertEqual(task.status, "pending")
+
+    def test_pending_to_cancelled(self):
+        task = Task(title="test")
+
+        transition_task(task, "cancelled")
+
+        self.assertEqual(task.status, "cancelled")
+
+    def test_completed_is_terminal(self):
+        task = Task(title="test", status="completed")
+
+        with self.assertRaises(ValueError):
+            transition_task(task, "running")
+
+    def test_cancelled_is_terminal(self):
+        task = Task(title="test", status="cancelled")
+
+        with self.assertRaises(ValueError):
+            transition_task(task, "running")
+
     def test_invalid_transition_raises(self):
-        task = Task(title="test", status="pending")
+        task = Task(title="test")
 
         with self.assertRaises(ValueError):
             transition_task(task, "completed")

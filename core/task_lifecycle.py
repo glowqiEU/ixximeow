@@ -2,10 +2,13 @@ from .models import Task
 
 
 ALLOWED_TRANSITIONS = {
-    "pending": {"running"},
-    "running": {"completed", "failed"},
+    "pending": {"running", "waiting_approval", "cancelled"},
+    "waiting_approval": {"running", "cancelled"},
+    "running": {"completed", "failed", "blocked"},
+    "blocked": {"running", "cancelled"},
+    "failed": {"pending"},
     "completed": set(),
-    "failed": set(),
+    "cancelled": set(),
 }
 
 
