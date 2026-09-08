@@ -4,7 +4,6 @@ from unittest.mock import patch
 from core.approval import Approval
 from core.models import Decision, Result, Task
 from core.orchestrator import Orchestrator
-from core.permissions import AutonomyLevel
 from core.state import SystemState
 
 
@@ -19,13 +18,14 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         )
         approval = Approval(
             task_id=task.id,
+            required_level="publish",
             reason="approval required",
             id="approval-1",
         )
 
-        with patch("core.orchestrator.build_context") as build_context, \
+        with patch("core.orchestrator.build_context"), \
              patch("core.orchestrator.generate_candidates", return_value=[decision]), \
-             patch("core.orchestrator.evaluate_decision") as evaluate, \
+             patch("core.orchestrator.evaluate_decision"), \
              patch("core.orchestrator.select_decision", return_value=decision), \
              patch("core.orchestrator.save_decision_evaluations"), \
              patch("core.orchestrator.load_decisions", return_value=[]), \
@@ -41,6 +41,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
              patch("core.orchestrator.append_event"), \
              patch("core.orchestrator.execute_task") as execute_task:
             first = Orchestrator().run()
+            execute_task.assert_not_called()
 
         self.assertEqual(first[1].status, "waiting_approval")
         self.assertIsNone(first[2])
@@ -63,7 +64,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
                      id=task.id,
                  ),
                  approved_result,
-             )), \
+             )) as resume_execute, \
              patch("core.orchestrator.load_state", return_value=SystemState(
                  active_task=task.id,
                  active_goal_id=decision.goal_id,
@@ -75,11 +76,12 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         self.assertEqual(resumed_task.status, "completed")
         self.assertEqual(result.task_id, resumed_task.id)
         self.assertTrue(result.success)
-        execute_task.assert_not_called()
+        resume_execute.assert_called_once_with(first[1], approval=approval)
 
     def test_rejected_approval_cancels_task_without_execution(self):
         approval = Approval(
             task_id="task-1",
+            required_level="publish",
             reason="approval required",
             status="rejected",
             id="approval-1",
@@ -103,7 +105,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
 
         self.assertEqual(resumed_task.status, "cancelled")
         self.assertIsNone(result)
-        execute_task.assert_called_once()
+        execute_task.assert_called_once_with(task, approval=approval)
 
 
 if __name__ == "__main__":
