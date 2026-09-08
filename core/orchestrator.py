@@ -40,6 +40,7 @@ class Orchestrator:
         task = Task(
             title=decision.action,
             decision_id=decision.id,
+            goal_id=decision.goal_id,
         )
         task = ensure_task_id(task)
 
