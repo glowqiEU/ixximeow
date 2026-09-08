@@ -1,7 +1,8 @@
 import unittest
 
 from core.decision_evaluation import DecisionEvaluation
-from core.decision_selection import calculate_selection_score
+from core.decision_selection import calculate_selection_score, select_decision
+from core.models import Decision
 
 
 class TestDecisionSelection(unittest.TestCase):
@@ -75,6 +76,53 @@ class TestDecisionSelection(unittest.TestCase):
         )
 
         self.assertEqual(calculate_selection_score(evaluation), 0.5)
+
+    def test_select_decision_uses_evaluation_score(self):
+        lower = Decision(
+            objective="goal-1",
+            action="lower score action",
+            reason="candidate",
+            priority=10,
+        )
+        higher = Decision(
+            objective="goal-1",
+            action="higher score action",
+            reason="candidate",
+            priority=1,
+        )
+
+        evaluations = [
+            DecisionEvaluation(
+                decision_id=lower.id,
+                relevance=0.4,
+                confidence=0.4,
+                risk=0.6,
+                effort=0.6,
+                reason="weaker evaluation",
+            ),
+            DecisionEvaluation(
+                decision_id=higher.id,
+                relevance=0.9,
+                confidence=0.9,
+                risk=0.1,
+                effort=0.1,
+                reason="stronger evaluation",
+            ),
+        ]
+
+        result = select_decision([lower, higher], evaluations)
+
+        self.assertEqual(result.id, higher.id)
+
+    def test_select_decision_requires_evaluation_for_each_candidate(self):
+        decision = Decision(
+            objective="goal-1",
+            action="candidate",
+            reason="candidate",
+        )
+
+        with self.assertRaises(ValueError):
+            select_decision([decision], [])
 
 
 if __name__ == "__main__":
