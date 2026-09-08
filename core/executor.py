@@ -3,7 +3,8 @@ from typing import Optional
 from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
-from .result_store import ensure_result_id, load_results, save_results
+from .result_store import load_results, save_results
+from .verification import verify_execution_result
 
 
 def execute_task(
@@ -33,7 +34,7 @@ def execute_task(
             success=True,
             summary="task execution completed",
         )
-
+        verify_execution_result(task, result)
         task = transition_task(task, "completed")
 
     except Exception as exc:
@@ -42,7 +43,7 @@ def execute_task(
             success=False,
             summary=f"task execution failed: {exc}",
         )
-
+        verify_execution_result(task, result)
         task = transition_task(task, "failed")
 
     results = load_results()
