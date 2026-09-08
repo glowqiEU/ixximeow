@@ -2,6 +2,7 @@ from .context_builder import build_context
 from .memory_query import build_memory_query
 from .decision_evaluator import evaluate_decision
 from .decision_selection import select_decision
+from .decision_store import load_decisions, save_decisions
 from .planner import generate_candidates
 from .state_manager import apply_cancellation, apply_decision, apply_result
 from .state_store import load_state, save_state
@@ -27,6 +28,10 @@ class Orchestrator:
             for candidate in candidates
         ]
         decision = select_decision(candidates, evaluations)
+
+        decisions = load_decisions()
+        decisions.append(decision)
+        save_decisions(decisions)
 
         tasks = load_tasks()
 
