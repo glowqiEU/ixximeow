@@ -2,7 +2,7 @@ import unittest
 
 from core.models import Decision, Result, Task
 from core.state import SystemState
-from core.state_manager import apply_decision, apply_result
+from core.state_manager import apply_cancellation, apply_decision, apply_result
 
 
 class TestStateManager(unittest.TestCase):
@@ -26,6 +26,16 @@ class TestStateManager(unittest.TestCase):
 
         self.assertIsNone(state.active_task)
         self.assertEqual(state.last_result_id, result.id)
+
+    def test_apply_cancellation_clears_active_task(self):
+        state = SystemState(active_task="task-1", last_decision_id="decision-1")
+        task = Task("post", id="task-1")
+
+        state = apply_cancellation(state, task)
+
+        self.assertIsNone(state.active_task)
+        self.assertEqual(state.last_decision_id, "decision-1")
+        self.assertIsNone(state.last_result_id)
 
 
 if __name__ == "__main__":
