@@ -24,10 +24,6 @@ def build_context(
     resolved_goal = goal
     if resolved_goal is None and current_state.active_goal_id is not None:
         resolved_goal = get_goal(current_state.active_goal_id)
-        if resolved_goal is None:
-            raise ValueError(
-                f"active goal not found: {current_state.active_goal_id}"
-            )
 
     active_task = None
     if current_state.active_task is not None:
