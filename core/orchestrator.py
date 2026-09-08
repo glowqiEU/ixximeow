@@ -1,6 +1,7 @@
 from .context_builder import build_context
 from .memory_query import build_memory_query
 from .decision_evaluator import evaluate_decision
+from .decision_evaluation_store import save_decision_evaluations
 from .decision_selection import select_decision
 from .decision_store import load_decisions, save_decisions
 from .planner import generate_candidates
@@ -27,6 +28,7 @@ class Orchestrator:
             evaluate_decision(candidate, context)
             for candidate in candidates
         ]
+        save_decision_evaluations(evaluations)
         decision = select_decision(candidates, evaluations)
 
         decisions = load_decisions()
