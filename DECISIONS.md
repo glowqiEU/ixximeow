@@ -342,3 +342,69 @@ verification
 learning
 
 the system should become more autonomous without becoming less understandable.
+
+---
+
+## D019 — decision evaluation is separate from decision selection
+
+### decision
+
+candidate decisions should be evaluated before selection.
+
+`Decision` represents a proposed action.
+
+`DecisionEvaluation` represents an assessment of that action in the current context.
+
+evaluation contains:
+
+- `relevance` — how directly the decision serves the current objective and context
+- `confidence` — how strongly the available evidence supports the decision
+- `risk` — potential downside, uncertainty, or irreversibility
+- `effort` — expected execution cost or complexity
+- `score` — the candidate's selection score
+- `reason` — explanation of the evaluation
+
+normalized evaluation signals use a range from `0.0` to `1.0`.
+
+### alternatives
+
+1. select decisions using priority only
+2. evaluate only after a decision has already been selected
+3. evaluate candidate decisions before selection
+
+### why
+
+priority alone is insufficient for a system that must eventually make context-sensitive decisions.
+
+post-hoc evaluation would explain a decision but would not improve the selection itself.
+
+evaluating candidates before selection allows the system to compare decisions using context, evidence, risk, and expected effort.
+
+the evaluation mechanism should remain replaceable.
+
+possible implementations include:
+
+- deterministic rules
+- llm-assisted evaluation
+- learning-based evaluation
+- hybrid evaluation
+
+### consequences
+
+decision selection becomes a two-stage process:
+
+candidates
+
+→ evaluation
+
+→ selection
+
+the scoring policy must be explicitly defined and tested before it becomes part of the production decision engine.
+
+evaluation must use available evidence and must not invent unsupported facts.
+
+the evaluation layer should remain independent from the mechanism used to produce the evaluation.
+
+### status
+
+accepted
