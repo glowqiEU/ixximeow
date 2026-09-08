@@ -204,14 +204,18 @@ class TestOrchestratorIntegration(unittest.TestCase):
             self.assertEqual(decision_result.id, decision.id)
             self.assertEqual(task.status, "waiting_approval")
             self.assertEqual(task.approval_id, approval.id)
+            self.assertEqual(approval.task_id, task.id)
             self.assertIsNone(result)
             mock_execute.assert_not_called()
 
             approval.status = "approved"
-            mock_execute.return_value = (
-                task,
-                Result(task_id=task.id, success=True, summary="published"),
+            task.status = "completed"
+            resumed_result = Result(
+                task_id=task.id,
+                success=True,
+                summary="published",
             )
+            mock_execute.return_value = (task, resumed_result)
 
             with patch("core.orchestrator.load_approvals", return_value=[approval]), \
                  patch("core.orchestrator.load_tasks", return_value=[task]), \
@@ -223,8 +227,9 @@ class TestOrchestratorIntegration(unittest.TestCase):
                 resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
 
         self.assertEqual(resumed_task.id, task.id)
-        self.assertEqual(resumed_task.status, "waiting_approval")
+        self.assertEqual(resumed_task.status, "completed")
         self.assertEqual(resumed_result.task_id, task.id)
+        self.assertTrue(resumed_result.success)
         mock_execute.assert_called_once_with(task, approval=approval)
 
 
