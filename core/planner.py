@@ -41,6 +41,7 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
                 objective="understand current situation",
                 action="inspect current state",
                 reason="no active goal or task is available",
+                priority=1,
             )
         )
 
