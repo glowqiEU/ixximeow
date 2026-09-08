@@ -8,5 +8,4 @@ class DecisionEvaluation:
     confidence: float
     risk: float
     effort: float
-    score: float
     reason: str
