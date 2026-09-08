@@ -14,16 +14,17 @@ def build_context(
     memories=None,
     history=None,
     tasks=None,
+    goal=None,
     query: Optional[str] = None,
 ) -> AgentContext:
     current_state = state if state is not None else load_state()
     all_memories = memories if memories is not None else load_memories()
     all_tasks = tasks if tasks is not None else load_tasks()
 
-    goal = None
-    if current_state.active_goal_id is not None:
-        goal = get_goal(current_state.active_goal_id)
-        if goal is None:
+    resolved_goal = goal
+    if resolved_goal is None and current_state.active_goal_id is not None:
+        resolved_goal = get_goal(current_state.active_goal_id)
+        if resolved_goal is None:
             raise ValueError(
                 f"active goal not found: {current_state.active_goal_id}"
             )
@@ -53,7 +54,7 @@ def build_context(
 
     return AgentContext(
         goal_id=current_state.active_goal_id,
-        goal=goal,
+        goal=resolved_goal,
         task=active_task,
         last_decision_id=current_state.last_decision_id,
         last_result_id=current_state.last_result_id,
