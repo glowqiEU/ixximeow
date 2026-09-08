@@ -35,9 +35,12 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
         tasks = load_tasks()
 
-        self.assertTrue(
-            any(item.id == task.id for item in tasks)
+        persisted_task = next(
+            item for item in tasks if item.id == task.id
         )
+
+        self.assertEqual(persisted_task.status, "completed")
+        self.assertEqual(persisted_task.decision_id, decision.id)
 
         history = load_events()
 
@@ -49,7 +52,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
                 for event in history
             )
         )
-
 
     def test_orchestrator_builds_context_with_memory_query(self):
         context = AgentContext(
@@ -82,6 +84,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
             mock_build_context.call_args.kwargs["query"],
             "create X content",
         )
+
 
 if __name__ == "__main__":
     unittest.main()
