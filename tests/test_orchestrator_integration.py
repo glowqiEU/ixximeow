@@ -9,6 +9,7 @@ from core.history_store import load_events
 from core.task_store import load_tasks
 from core.permissions import AutonomyLevel
 from core.memory import Memory
+from core.state import SystemState
 
 
 class TestOrchestratorIntegration(unittest.TestCase):
@@ -125,7 +126,11 @@ class TestOrchestratorIntegration(unittest.TestCase):
                     ) as mock_select:
                         with patch("core.orchestrator.load_tasks", return_value=[]), \
                              patch("core.orchestrator.save_tasks"), \
-                             patch("core.orchestrator.load_state"), \
+                             patch(
+                                 "core.orchestrator.load_state",
+                                 return_value=SystemState(active_goal_id="goal-1"),
+                             ), \
+                             patch("core.orchestrator.save_state"), \
                              patch("core.orchestrator.check_approval", return_value=None), \
                              patch("core.orchestrator.execute_task") as mock_execute:
                             mock_execute.return_value = (
@@ -133,8 +138,8 @@ class TestOrchestratorIntegration(unittest.TestCase):
                                 type("ResultLike", (), {"id": "result-1", "summary": "done"})(),
                             )
                             with patch("core.orchestrator.append_event"), \
-                                 patch("core.orchestrator.apply_decision", return_value=None), \
-                                 patch("core.orchestrator.apply_result", return_value=None):
+                                 patch("core.orchestrator.apply_decision", return_value=SystemState()), \
+                                 patch("core.orchestrator.apply_result", return_value=SystemState()):
                                 Orchestrator().run()
 
         self.assertEqual(mock_evaluate.call_count, 2)
