@@ -23,3 +23,12 @@ def apply_result(
     state.last_result_id = result.id
 
     return state
+
+
+def apply_cancellation(
+    state: SystemState,
+    task: Task,
+) -> SystemState:
+    state.active_task = None
+
+    return state
