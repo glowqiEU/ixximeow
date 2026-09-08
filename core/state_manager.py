@@ -14,7 +14,7 @@ def apply_decision(
     decision: Decision,
     task: Task,
 ) -> SystemState:
-    state.active_task = task.id or task.title
+    state.active_task = task.id
     state.last_decision_id = decision.id
     state.last_result_id = None
     return _touch(state)
@@ -25,6 +25,9 @@ def apply_result(
     task: Task,
     result: Result,
 ) -> SystemState:
+    if result.task_id != task.id:
+        raise ValueError("result does not belong to task")
+
     state.active_task = None
     state.last_result_id = result.id
     return _touch(state)
