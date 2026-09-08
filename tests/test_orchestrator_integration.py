@@ -114,8 +114,16 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
         with patch("core.orchestrator.build_context", return_value=context):
             with patch("core.orchestrator.generate_candidates") as mock_candidates:
-                first = type("DecisionLike", (), {"id": "low", "action": "low action"})()
-                second = type("DecisionLike", (), {"id": "high", "action": "high action"})()
+                first = type(
+                    "DecisionLike",
+                    (),
+                    {"id": "low", "action": "low action", "goal_id": "goal-1"},
+                )()
+                second = type(
+                    "DecisionLike",
+                    (),
+                    {"id": "high", "action": "high action", "goal_id": "goal-1"},
+                )()
                 mock_candidates.return_value = [first, second]
 
                 with patch(
