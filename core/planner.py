@@ -8,6 +8,9 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
     if context.task:
         reason = "an active task already exists"
 
+        if context.goal is not None:
+            reason += f"; goal: {context.goal.description}"
+
         if context.memories:
             memory_summary = "; ".join(
                 memory.content for memory in context.memories
@@ -17,7 +20,7 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
         candidates.append(
             Decision(
                 objective=context.goal_id or "continue current goal",
-                action=f"continue: {context.task}",
+                action=f"continue: {context.task.title}",
                 reason=reason,
                 priority=10,
                 goal_id=context.goal_id,
@@ -25,11 +28,15 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
         )
 
     if context.goal_id:
+        reason = "an active goal exists without requiring a specific task"
+        if context.goal is not None:
+            reason += f"; goal: {context.goal.description}"
+
         candidates.append(
             Decision(
                 objective=context.goal_id,
                 action="review next useful action",
-                reason="an active goal exists without requiring a specific task",
+                reason=reason,
                 priority=5,
                 goal_id=context.goal_id,
             )
