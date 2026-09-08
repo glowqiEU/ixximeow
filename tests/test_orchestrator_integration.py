@@ -175,6 +175,10 @@ class TestOrchestratorIntegration(unittest.TestCase):
             reason="publishing requires approval",
         )
 
+        def approval_for_task(task):
+            approval.task_id = task.id
+            return approval
+
         with patch("core.orchestrator.build_context", return_value=context), \
              patch("core.orchestrator.generate_candidates", return_value=[decision]), \
              patch(
@@ -193,7 +197,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.load_state", return_value=SystemState(active_goal_id="goal-1")), \
              patch("core.orchestrator.save_state"), \
-             patch("core.orchestrator.check_approval", return_value=approval), \
+             patch("core.orchestrator.check_approval", side_effect=approval_for_task), \
              patch("core.orchestrator.append_event"), \
              patch("core.orchestrator.execute_task") as mock_execute, \
              patch("core.orchestrator.save_decisions"), \
