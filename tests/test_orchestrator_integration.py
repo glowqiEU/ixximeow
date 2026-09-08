@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from core.orchestrator import Orchestrator
 from core.context import AgentContext
+from core.decision_evaluation import DecisionEvaluation
 from core.state_store import load_state
 from core.history_store import load_events
 from core.task_store import load_tasks
@@ -84,6 +85,64 @@ class TestOrchestratorIntegration(unittest.TestCase):
             mock_build_context.call_args.kwargs["query"],
             "create X content",
         )
+
+    def test_orchestrator_evaluates_candidates_before_selection(self):
+        context = AgentContext(
+            goal_id="goal-1",
+            task="create X content",
+        )
+
+        low = DecisionEvaluation(
+            decision_id="low",
+            relevance=0.4,
+            confidence=0.4,
+            risk=0.6,
+            effort=0.6,
+            reason="lower utility",
+        )
+        high = DecisionEvaluation(
+            decision_id="high",
+            relevance=0.9,
+            confidence=0.9,
+            risk=0.1,
+            effort=0.1,
+            reason="higher utility",
+        )
+
+        with patch("core.orchestrator.build_context", return_value=context):
+            with patch("core.orchestrator.generate_candidates") as mock_candidates:
+                first = type("DecisionLike", (), {"id": "low", "action": "low action"})()
+                second = type("DecisionLike", (), {"id": "high", "action": "high action"})()
+                mock_candidates.return_value = [first, second]
+
+                with patch(
+                    "core.orchestrator.evaluate_decision",
+                    side_effect=[low, high],
+                ) as mock_evaluate:
+                    with patch(
+                        "core.orchestrator.select_decision",
+                        return_value=second,
+                    ) as mock_select:
+                        with patch("core.orchestrator.load_tasks", return_value=[]), \
+                             patch("core.orchestrator.save_tasks"), \
+                             patch("core.orchestrator.load_state"), \
+                             patch("core.orchestrator.check_approval", return_value=None), \
+                             patch("core.orchestrator.execute_task") as mock_execute:
+                            mock_execute.return_value = (
+                                type("TaskLike", (), {"id": "task-1", "status": "completed"})(),
+                                type("ResultLike", (), {"id": "result-1", "summary": "done"})(),
+                            )
+                            with patch("core.orchestrator.append_event"), \
+                                 patch("core.orchestrator.apply_decision", return_value=None), \
+                                 patch("core.orchestrator.apply_result", return_value=None):
+                                Orchestrator().run()
+
+        self.assertEqual(mock_evaluate.call_count, 2)
+        self.assertEqual(
+            [call.args[0].id for call in mock_evaluate.call_args_list],
+            ["low", "high"],
+        )
+        mock_select.assert_called_once_with([first, second], [low, high])
 
 
 if __name__ == "__main__":
