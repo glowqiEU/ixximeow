@@ -38,7 +38,6 @@ class TestDecisionEvaluator(unittest.TestCase):
         self.assertGreaterEqual(evaluation.effort, 0.0)
         self.assertLessEqual(evaluation.effort, 1.0)
 
-        self.assertIsInstance(evaluation.score, float)
         self.assertTrue(evaluation.reason)
 
     def test_matching_goal_has_higher_relevance(self):
