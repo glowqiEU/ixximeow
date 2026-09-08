@@ -92,12 +92,18 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
             approval_id=approval.id,
             id=approval.task_id,
         )
+        cancelled_task = Task(
+            "publish",
+            status="cancelled",
+            approval_id=approval.id,
+            id=approval.task_id,
+        )
 
         with patch("core.orchestrator.load_approvals", return_value=[approval]), \
              patch("core.orchestrator.load_tasks", return_value=[task]), \
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.save_approvals"), \
-             patch("core.orchestrator.execute_task") as execute_task, \
+             patch("core.orchestrator.execute_task", return_value=(cancelled_task, None)) as execute_task, \
              patch("core.orchestrator.load_state", return_value=SystemState(active_task=task.id)), \
              patch("core.orchestrator.save_state"), \
              patch("core.orchestrator.append_event"):
