@@ -20,6 +20,7 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
                 action=f"continue: {context.task}",
                 reason=reason,
                 priority=10,
+                goal_id=context.goal_id,
             )
         )
 
@@ -30,6 +31,7 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
                 action="review next useful action",
                 reason="an active goal exists without requiring a specific task",
                 priority=5,
+                goal_id=context.goal_id,
             )
         )
 
@@ -39,7 +41,6 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
                 objective="understand current situation",
                 action="inspect current state",
                 reason="no active goal or task is available",
-                priority=1,
             )
         )
 
