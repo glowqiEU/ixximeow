@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 from .persistence import load_json, save_json
