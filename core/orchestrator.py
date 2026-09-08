@@ -1,4 +1,6 @@
 from .context_builder import build_context
+from .memory_query import build_memory_query
+from .memory_query import build_memory_query
 from .decision_engine import choose_decision
 from .planner import generate_candidates
 from .state_manager import apply_decision, apply_result
@@ -15,6 +17,8 @@ from .approval_store import load_approvals, save_approvals
 class Orchestrator:
     def run(self):
         context = build_context()
+        query = build_memory_query(context)
+        context = build_context(query=query)
 
         candidates = generate_candidates(context)
         decision = choose_decision(candidates)

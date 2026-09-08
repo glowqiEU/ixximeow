@@ -2,10 +2,12 @@ import unittest
 from unittest.mock import patch
 
 from core.orchestrator import Orchestrator
+from core.context import AgentContext
 from core.state_store import load_state
 from core.history_store import load_events
 from core.task_store import load_tasks
 from core.permissions import AutonomyLevel
+from core.memory import Memory
 
 
 class TestOrchestratorIntegration(unittest.TestCase):
@@ -48,6 +50,38 @@ class TestOrchestratorIntegration(unittest.TestCase):
             )
         )
 
+
+    def test_orchestrator_builds_context_with_memory_query(self):
+        context = AgentContext(
+            goal_id="goal-1",
+            task="create X content",
+        )
+
+        with patch("core.orchestrator.build_context", side_effect=[
+            context,
+            AgentContext(
+                goal_id="goal-1",
+                task="create X content",
+                memories=[
+                    Memory(
+                        content="flash photos perform better",
+                        source="observed_result",
+                        confidence=0.8,
+                    )
+                ],
+            ),
+        ]) as mock_build_context:
+            with patch(
+                "core.approval_gate.CURRENT_AUTONOMY_LEVEL",
+                AutonomyLevel.EXECUTE,
+            ):
+                Orchestrator().run()
+
+        self.assertEqual(mock_build_context.call_count, 2)
+        self.assertEqual(
+            mock_build_context.call_args.kwargs["query"],
+            "create X content",
+        )
 
 if __name__ == "__main__":
     unittest.main()
