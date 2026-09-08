@@ -2,6 +2,10 @@ from .context import AgentContext
 from .models import Decision
 
 
+def _task_title(task) -> str:
+    return task.title if hasattr(task, "title") else task
+
+
 def generate_candidates(context: AgentContext) -> list[Decision]:
     candidates = []
 
@@ -20,7 +24,7 @@ def generate_candidates(context: AgentContext) -> list[Decision]:
         candidates.append(
             Decision(
                 objective=context.goal_id or "continue current goal",
-                action=f"continue: {context.task.title}",
+                action=f"continue: {_task_title(context.task)}",
                 reason=reason,
                 priority=10,
                 goal_id=context.goal_id,
