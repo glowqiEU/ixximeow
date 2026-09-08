@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from core.approval import Approval
 from core.orchestrator import Orchestrator
 from core.context import AgentContext
 from core.decision_evaluation import DecisionEvaluation
@@ -9,6 +10,7 @@ from core.history_store import load_events
 from core.task_store import load_tasks
 from core.permissions import AutonomyLevel
 from core.memory import Memory
+from core.models import Decision, Result
 from core.state import SystemState
 
 
@@ -158,6 +160,72 @@ class TestOrchestratorIntegration(unittest.TestCase):
             ["low", "high"],
         )
         mock_select.assert_called_once_with([first, second], [low, high])
+
+    def test_approval_lifecycle_waits_then_resumes_same_task(self):
+        context = AgentContext(goal_id="goal-1", task=None)
+        decision = Decision(
+            objective="goal-1",
+            action="publish post",
+            reason="selected action",
+            goal_id="goal-1",
+        )
+        approval = Approval(
+            task_id="placeholder",
+            required_level="publish",
+            reason="publishing requires approval",
+        )
+
+        with patch("core.orchestrator.build_context", return_value=context), \
+             patch("core.orchestrator.generate_candidates", return_value=[decision]), \
+             patch(
+                 "core.orchestrator.evaluate_decision",
+                 return_value=DecisionEvaluation(
+                     decision_id=decision.id,
+                     relevance=1.0,
+                     confidence=1.0,
+                     risk=0.0,
+                     effort=0.0,
+                     reason="approved test decision",
+                 ),
+             ), \
+             patch("core.orchestrator.select_decision", return_value=decision), \
+             patch("core.orchestrator.load_tasks", return_value=[]), \
+             patch("core.orchestrator.save_tasks"), \
+             patch("core.orchestrator.load_state", return_value=SystemState(active_goal_id="goal-1")), \
+             patch("core.orchestrator.save_state"), \
+             patch("core.orchestrator.check_approval", return_value=approval), \
+             patch("core.orchestrator.append_event"), \
+             patch("core.orchestrator.execute_task") as mock_execute, \
+             patch("core.orchestrator.save_decisions"), \
+             patch("core.orchestrator.load_decisions", return_value=[]), \
+             patch("core.orchestrator.save_approvals"):
+            decision_result, task, result = Orchestrator().run()
+
+            self.assertEqual(decision_result.id, decision.id)
+            self.assertEqual(task.status, "waiting_approval")
+            self.assertEqual(task.approval_id, approval.id)
+            self.assertIsNone(result)
+            mock_execute.assert_not_called()
+
+            approval.status = "approved"
+            mock_execute.return_value = (
+                task,
+                Result(task_id=task.id, success=True, summary="published"),
+            )
+
+            with patch("core.orchestrator.load_approvals", return_value=[approval]), \
+                 patch("core.orchestrator.load_tasks", return_value=[task]), \
+                 patch("core.orchestrator.save_tasks"), \
+                 patch("core.orchestrator.save_approvals"), \
+                 patch("core.orchestrator.load_state", return_value=SystemState(active_goal_id="goal-1")), \
+                 patch("core.orchestrator.save_state"), \
+                 patch("core.orchestrator.append_event"):
+                resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
+
+        self.assertEqual(resumed_task.id, task.id)
+        self.assertEqual(resumed_task.status, "waiting_approval")
+        self.assertEqual(resumed_result.task_id, task.id)
+        mock_execute.assert_called_once_with(task, approval=approval)
 
 
 if __name__ == "__main__":
