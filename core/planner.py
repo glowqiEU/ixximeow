@@ -3,7 +3,9 @@ from .models import Decision
 
 
 def _task_title(task) -> str:
-    return task.title if hasattr(task, "title") else task
+    if isinstance(task, str):
+        return task
+    return task.title
 
 
 def generate_candidates(context: AgentContext) -> list[Decision]:
