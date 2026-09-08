@@ -5,12 +5,14 @@ from .state import SystemState
 from .memory import Memory
 from .history import HistoryEvent
 from .models import Task
+from .goals import Goal
 
 
 @dataclass
 class AgentContext:
     goal_id: Optional[str] = None
-    task: Optional[str] = None
+    goal: Optional[Goal] = None
+    task: Optional[Task] = None
     last_decision_id: Optional[str] = None
     last_result_id: Optional[str] = None
 
@@ -23,7 +25,6 @@ class AgentContext:
     def from_state(cls, state: SystemState) -> "AgentContext":
         return cls(
             goal_id=state.active_goal_id,
-            task=state.active_task,
             last_decision_id=state.last_decision_id,
             last_result_id=state.last_result_id,
             state=state,
