@@ -11,7 +11,7 @@ from core.history_store import load_events
 from core.task_store import load_tasks
 from core.permissions import AutonomyLevel
 from core.memory import Memory
-from core.models import Decision, Result
+from core.models import Decision, Result, Task
 from core.state import SystemState
 
 
@@ -222,13 +222,20 @@ class TestOrchestratorIntegration(unittest.TestCase):
             mock_execute.assert_not_called()
 
             approval.status = "approved"
-            task.status = "completed"
+            resumed_task = Task(
+                title=task.title,
+                status="completed",
+                decision_id=task.decision_id,
+                goal_id=task.goal_id,
+                approval_id=task.approval_id,
+                id=task.id,
+            )
             resumed_result = Result(
                 task_id=task.id,
                 success=True,
                 summary="published",
             )
-            mock_execute.return_value = (task, resumed_result)
+            mock_execute.return_value = (resumed_task, resumed_result)
             mock_load_tasks.return_value = [task]
 
             resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
