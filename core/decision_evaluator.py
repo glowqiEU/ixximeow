@@ -13,6 +13,5 @@ def evaluate_decision(
         confidence=0.5,
         risk=0.5,
         effort=0.5,
-        score=float(decision.priority),
         reason="initial deterministic evaluation",
     )
