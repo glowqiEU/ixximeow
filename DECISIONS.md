@@ -361,7 +361,6 @@ evaluation contains:
 - `confidence` — how strongly the available evidence supports the decision
 - `risk` — potential downside, uncertainty, or irreversibility
 - `effort` — expected execution cost or complexity
-- `score` — the candidate's selection score
 - `reason` — explanation of the evaluation
 
 normalized evaluation signals use a range from `0.0` to `1.0`.
@@ -399,7 +398,9 @@ candidates
 
 → selection
 
-the scoring policy must be explicitly defined and tested before it becomes part of the production decision engine.
+the selection scoring policy must be explicitly defined and tested before it becomes part of the production decision engine.
+
+selection score belongs to the selection layer, not to `DecisionEvaluation`.
 
 evaluation must use available evidence and must not invent unsupported facts.
 
