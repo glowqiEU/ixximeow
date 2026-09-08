@@ -14,6 +14,7 @@ class TestPlanner(unittest.TestCase):
         self.assertEqual(len(candidates), 2)
         self.assertEqual(candidates[0].action, "continue: build agent")
         self.assertEqual(candidates[0].priority, 10)
+        self.assertEqual(candidates[0].goal_id, "goal-1")
 
     def test_goal_without_task_creates_review_candidate(self):
         context = AgentContext(goal_id="goal-1", task=None)
@@ -23,6 +24,7 @@ class TestPlanner(unittest.TestCase):
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0].action, "review next useful action")
         self.assertEqual(candidates[0].priority, 5)
+        self.assertEqual(candidates[0].goal_id, "goal-1")
 
     def test_empty_context_creates_inspection_candidate(self):
         context = AgentContext()
@@ -32,6 +34,7 @@ class TestPlanner(unittest.TestCase):
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0].action, "inspect current state")
         self.assertEqual(candidates[0].priority, 1)
+        self.assertIsNone(candidates[0].goal_id)
 
     def test_active_task_can_use_relevant_memory(self):
         context = AgentContext(
