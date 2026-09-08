@@ -197,7 +197,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
             ))
             stack.enter_context(patch("core.orchestrator.select_decision", return_value=decision))
             mock_load_tasks = stack.enter_context(
-                patch("core.orchestrator.load_tasks", side_effect=[[], [None]])
+                patch("core.orchestrator.load_tasks", return_value=[])
             )
             stack.enter_context(patch("core.orchestrator.save_tasks"))
             stack.enter_context(patch("core.orchestrator.load_state", side_effect=[state, state]))
@@ -229,7 +229,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
                 summary="published",
             )
             mock_execute.return_value = (task, resumed_result)
-            mock_load_tasks.side_effect = [[task]]
+            mock_load_tasks.return_value = [task]
 
             resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
 
