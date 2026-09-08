@@ -1,6 +1,5 @@
 from .context_builder import build_context
 from .memory_query import build_memory_query
-from .memory_query import build_memory_query
 from .decision_engine import choose_decision
 from .planner import generate_candidates
 from .state_manager import apply_decision, apply_result
@@ -12,6 +11,7 @@ from .history import HistoryEvent
 from .models import Task
 from .approval_gate import check_approval
 from .approval_store import load_approvals, save_approvals
+from .task_lifecycle import transition_task
 
 
 class Orchestrator:
@@ -45,7 +45,11 @@ class Orchestrator:
         approval = check_approval(task)
 
         if approval is not None:
-            task.status = "waiting_approval"
+            task.approval_id = approval.id
+            task = transition_task(task, "waiting_approval")
+
+            tasks[-1] = task
+            save_tasks(tasks)
 
             approvals = load_approvals()
             approvals.append(approval)
@@ -65,6 +69,9 @@ class Orchestrator:
             return decision, task, None
 
         task, result = execute_task(task)
+
+        tasks[-1] = task
+        save_tasks(tasks)
 
         state = apply_result(
             state=state,
