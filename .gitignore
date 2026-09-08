@@ -5,6 +5,7 @@ goals.json
 tasks.json
 decisions.json
 decision_evaluations.json
+outcomes.json
 
 approvals.json
 
