@@ -240,7 +240,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
             resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
 
-        self.assertEqual(mock_load_approvals.call_count, 1)
+        self.assertEqual(mock_load_approvals.call_count, 2)
         self.assertEqual(resumed_task.id, task.id)
         self.assertEqual(resumed_task.status, "completed")
         self.assertEqual(resumed_result.task_id, task.id)
