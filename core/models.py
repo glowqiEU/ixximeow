@@ -15,6 +15,7 @@ class Decision:
     reason: str
     priority: int = 0
     status: str = "proposed"
+    goal_id: Optional[str] = None
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -26,6 +27,7 @@ class Task:
     title: str
     status: str = "pending"
     decision_id: Optional[str] = None
+    goal_id: Optional[str] = None
     approval_id: Optional[str] = None
     required_level: str = "execute"
     id: str = field(default_factory=new_id)
