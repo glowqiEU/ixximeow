@@ -25,6 +25,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
         self.assertIsNotNone(result.id)
 
         self.assertEqual(task.decision_id, decision.id)
+        self.assertEqual(task.goal_id, decision.goal_id)
         self.assertEqual(result.task_id, task.id)
         self.assertEqual(task.status, "completed")
         self.assertTrue(result.success)
@@ -43,6 +44,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
         self.assertEqual(persisted_task.status, "completed")
         self.assertEqual(persisted_task.decision_id, decision.id)
+        self.assertEqual(persisted_task.goal_id, decision.goal_id)
 
         history = load_events()
 
