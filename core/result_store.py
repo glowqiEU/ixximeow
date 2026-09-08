@@ -1,25 +1,19 @@
-import json
 from pathlib import Path
 from uuid import uuid4
 
 from .models import Result
+from .persistence import load_json, save_json
 
 
 RESULTS_FILE = Path("results.json")
 
 
 def save_results(results: list[Result]) -> None:
-    RESULTS_FILE.write_text(
-        json.dumps([result.__dict__ for result in results], indent=2),
-        encoding="utf-8",
-    )
+    save_json(RESULTS_FILE, [result.__dict__ for result in results])
 
 
 def load_results() -> list[Result]:
-    if not RESULTS_FILE.exists():
-        return []
-
-    data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
+    data = load_json(RESULTS_FILE, [])
     return [Result(**item) for item in data]
 
 
