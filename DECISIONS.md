@@ -409,3 +409,43 @@ the evaluation layer should remain independent from the mechanism used to produc
 ### status
 
 accepted
+
+---
+
+## D020 — decision, plan, and task are separate contracts
+
+### decision
+
+a selected decision must pass through an explicit plan before becoming a task.
+
+`Decision` answers: what should be done and why.
+
+`Plan` answers: how the selected decision is decomposed into work.
+
+`Task` answers: what concrete unit of work is currently being executed.
+
+`Action` remains the concrete operation executed for a task.
+
+### alternatives
+
+1. create a task directly from `Decision.action`
+2. make `Task` responsible for both planning and execution
+3. introduce an explicit `Plan` boundary
+
+### why
+
+directly copying `Decision.action` into `Task.title` collapses two different responsibilities and makes later multi-step planning difficult to introduce safely.
+
+an explicit plan boundary allows the system to add real decomposition later without changing the meaning of a decision or task.
+
+### consequences
+
+the intended execution lineage is:
+
+`goal → decision → plan → task → action → execution → result → outcome`
+
+for the current MVP, `Plan` deliberately contains one step. this establishes the contract without inventing planning intelligence before it is needed.
+
+### status
+
+accepted
