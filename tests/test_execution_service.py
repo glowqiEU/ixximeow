@@ -74,5 +74,48 @@ class TestExecutionService(unittest.TestCase):
             self.assertEqual(evidence[0].value, False)
 
 
+    def test_duplicate_action_execution_is_rejected_by_idempotency(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register(
+                "publish_post",
+                lambda action: {"summary": "published"},
+            )
+            action = Action(
+                task_id="task-1",
+                name="publish_post",
+                id="action-1",
+            )
+
+            import core.evidence_store as evidence_store
+            import core.execution_store as execution_store
+            import core.result_store as result_store
+
+            original = (
+                evidence_store.EVIDENCE_FILE,
+                execution_store.EXECUTIONS_FILE,
+                result_store.RESULTS_FILE,
+            )
+            evidence_store.EVIDENCE_FILE = root / "evidence.json"
+            execution_store.EXECUTIONS_FILE = root / "executions.json"
+            result_store.RESULTS_FILE = root / "results.json"
+
+            try:
+                first, _, _ = execute_action(action, registry)
+
+                with self.assertRaises(ValueError):
+                    execute_action(action, registry)
+            finally:
+                (
+                    evidence_store.EVIDENCE_FILE,
+                    execution_store.EXECUTIONS_FILE,
+                    result_store.RESULTS_FILE,
+                ) = original
+
+            self.assertEqual(first.status, "succeeded")
+            self.assertEqual(first.idempotency_key, action.id)
+
+
 if __name__ == "__main__":
     unittest.main()
