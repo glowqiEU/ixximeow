@@ -54,8 +54,6 @@ def verify_outcome(
         raise ValueError("outcome does not belong to decision")
     if outcome.task_id != task.id:
         raise ValueError("outcome does not belong to task")
-    if outcome.status not in {"achieved", "not_achieved", "uncertain", "blocked"}:
-        raise ValueError("invalid outcome status")
 
     result_by_id = {result.id: result for result in results}
     evidence_by_id = {item.id: item for item in evidence}
@@ -82,6 +80,8 @@ def verify_outcome(
             raise ValueError("outcome evidence must reference a listed result")
 
     if outcome.status == "blocked":
+        if not outcome.block_reason:
+            raise ValueError("blocked outcome requires block_reason")
         return
 
     valid_evidence = [
@@ -104,7 +104,7 @@ def verify_outcome(
 
     if outcome.status == "achieved" and not outcome.evidence_ids:
         raise ValueError("achieved outcome requires evidence")
-    if outcome.status != "blocked" and not outcome.result_ids and not outcome.evidence_ids:
+    if not outcome.result_ids and not outcome.evidence_ids:
         raise ValueError("outcome must reference recorded artifacts")
     if outcome.status != expected_status:
         raise ValueError("outcome status does not match deterministic criterion evaluation")
