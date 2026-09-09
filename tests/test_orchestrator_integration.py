@@ -9,6 +9,7 @@ from core.decision_evaluation import DecisionEvaluation
 from core.state_store import load_state
 from core.history_store import load_events
 from core.task_store import load_tasks
+from core.plan_store import load_plans
 from core.permissions import AutonomyLevel
 from core.memory import Memory
 from core.models import Decision, Result, Task
@@ -29,9 +30,16 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
         self.assertEqual(task.decision_id, decision.id)
         self.assertEqual(task.goal_id, decision.goal_id)
+        self.assertTrue(task.plan_id)
         self.assertEqual(result.task_id, task.id)
         self.assertEqual(task.status, "completed")
         self.assertTrue(result.success)
+
+        plans = load_plans()
+        persisted_plan = next(item for item in plans if item.id == task.plan_id)
+        self.assertEqual(persisted_plan.decision_id, decision.id)
+        self.assertEqual(persisted_plan.goal_id, decision.goal_id)
+        self.assertEqual(persisted_plan.steps, [decision.action])
 
         state = load_state()
 
@@ -47,6 +55,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
 
         self.assertEqual(persisted_task.status, "completed")
         self.assertEqual(persisted_task.decision_id, decision.id)
+        self.assertEqual(persisted_task.plan_id, task.plan_id)
         self.assertEqual(persisted_task.goal_id, decision.goal_id)
 
         history = load_events()
@@ -139,6 +148,8 @@ class TestOrchestratorIntegration(unittest.TestCase):
                     ) as mock_select:
                         with patch("core.orchestrator.load_tasks", return_value=[]), \
                              patch("core.orchestrator.save_tasks"), \
+                             patch("core.orchestrator.load_plans", return_value=[]), \
+                             patch("core.orchestrator.save_plans"), \
                              patch(
                                  "core.orchestrator.load_state",
                                  return_value=SystemState(active_goal_id="goal-1"),
@@ -200,6 +211,8 @@ class TestOrchestratorIntegration(unittest.TestCase):
                 patch("core.orchestrator.load_tasks", return_value=[])
             )
             stack.enter_context(patch("core.orchestrator.save_tasks"))
+            stack.enter_context(patch("core.orchestrator.load_plans", return_value=[]))
+            stack.enter_context(patch("core.orchestrator.save_plans"))
             stack.enter_context(patch("core.orchestrator.load_state", side_effect=[state, state]))
             stack.enter_context(patch("core.orchestrator.save_state"))
             stack.enter_context(patch("core.orchestrator.check_approval", side_effect=approval_for_task))
@@ -217,6 +230,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
             self.assertEqual(decision_result.id, decision.id)
             self.assertEqual(task.status, "waiting_approval")
             self.assertEqual(task.approval_id, approval.id)
+            self.assertTrue(task.plan_id)
             self.assertEqual(approval.task_id, task.id)
             self.assertIsNone(result)
             mock_execute.assert_not_called()
@@ -226,6 +240,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
                 title=task.title,
                 status="completed",
                 decision_id=task.decision_id,
+                plan_id=task.plan_id,
                 goal_id=task.goal_id,
                 approval_id=task.approval_id,
                 id=task.id,
