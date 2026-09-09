@@ -8,6 +8,7 @@ from core.models import Task
 class TestExecutorApproval(unittest.TestCase):
     def test_pending_approval_blocks_execution(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
@@ -15,6 +16,7 @@ class TestExecutorApproval(unittest.TestCase):
 
         task = Task(
             title="publish content",
+            id="task-123",
             approval_id=approval.id,
         )
 
@@ -25,6 +27,7 @@ class TestExecutorApproval(unittest.TestCase):
 
     def test_approved_task_can_execute(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
@@ -33,6 +36,7 @@ class TestExecutorApproval(unittest.TestCase):
 
         task = Task(
             title="publish content",
+            id="task-123",
             approval_id=approval.id,
         )
 
