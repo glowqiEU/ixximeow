@@ -57,6 +57,23 @@ class TestExecutionStoreContract(unittest.TestCase):
         self.assertIsNotNone(found)
         self.assertEqual(found.id, execution.id)
 
+    def test_duplicate_idempotency_key_cannot_create_second_execution(self):
+        first = Execution(action_id="action-1", task_id="task-1")
+        second = Execution(
+            action_id="action-2",
+            task_id="task-2",
+            idempotency_key=first.idempotency_key,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            execution_file = Path(directory) / "executions.json"
+            with patch("core.execution_store.EXECUTIONS_FILE", execution_file):
+                upsert_execution(first)
+                with self.assertRaises(ValueError):
+                    upsert_execution(second)
+
+        self.assertNotEqual(first.id, second.id)
+
 
 if __name__ == "__main__":
     unittest.main()
