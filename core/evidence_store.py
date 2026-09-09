@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from .evidence import Evidence
 from .persistence import load_json, save_json
@@ -16,7 +17,7 @@ def load_evidence() -> list[Evidence]:
     return [Evidence(**item) for item in data]
 
 
-def find_evidence_by_id(evidence_id: str) -> Evidence | None:
+def find_evidence_by_id(evidence_id: str) -> Optional[Evidence]:
     return next(
         (item for item in load_evidence() if item.id == evidence_id),
         None,
