@@ -33,11 +33,18 @@ def find_outcome_by_task_id(task_id: str) -> Optional[Outcome]:
 
 def upsert_outcome(outcome: Outcome) -> None:
     outcomes = load_outcomes()
+
     for index, existing in enumerate(outcomes):
         if existing.id == outcome.id:
             outcomes[index] = outcome
             save_outcomes(outcomes)
             return
+
+    conflicting_outcome = find_outcome_by_task_id(outcome.task_id)
+    if conflicting_outcome is not None:
+        raise ValueError(
+            "outcome task_id already belongs to another outcome"
+        )
 
     outcomes.append(outcome)
     save_outcomes(outcomes)
