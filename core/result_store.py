@@ -33,11 +33,18 @@ def find_result_by_execution_id(execution_id: str) -> Optional[Result]:
 
 def upsert_result(result: Result) -> None:
     results = load_results()
+
     for index, existing in enumerate(results):
         if existing.id == result.id:
             results[index] = result
             save_results(results)
             return
+
+    conflicting_result = find_result_by_execution_id(result.execution_id)
+    if conflicting_result is not None:
+        raise ValueError(
+            "result execution_id already belongs to another result"
+        )
 
     results.append(result)
     save_results(results)
