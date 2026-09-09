@@ -8,6 +8,46 @@ from .models import Result
 from .result_store import upsert_result
 
 
+def _build_evidence(
+    result: Result,
+    execution: Execution,
+    output,
+    summary: str,
+) -> list[Evidence]:
+    items = [
+        Evidence(
+            result_id=result.id,
+            execution_id=execution.id,
+            kind="execution_output",
+            claim="execution_succeeded",
+            value=result.success,
+            content=summary,
+            verified=True,
+        )
+    ]
+
+    if not isinstance(output, dict):
+        return items
+
+    for item in output.get("evidence", []):
+        if not isinstance(item, dict):
+            raise ValueError("action evidence entries must be dictionaries")
+        items.append(
+            Evidence(
+                result_id=result.id,
+                execution_id=execution.id,
+                kind=item.get("kind", "execution_output"),
+                claim=item["claim"],
+                value=item.get("value"),
+                content=item["content"],
+                source=item.get("source"),
+                verified=item.get("verified", False),
+            )
+        )
+
+    return items
+
+
 def execute_action(
     action: Action,
     registry: ActionRegistry,
@@ -36,15 +76,7 @@ def execute_action(
             success=True,
             summary=summary,
         )
-        evidence = Evidence(
-            result_id=result.id,
-            execution_id=execution.id,
-            kind="execution_output",
-            claim="execution_succeeded",
-            value=True,
-            content=summary,
-            verified=True,
-        )
+        evidence = _build_evidence(result, execution, output, summary)
     except Exception as exc:
         execution.transition("failed")
         result = Result(
@@ -54,17 +86,10 @@ def execute_action(
             success=False,
             summary=f"action execution failed: {exc}",
         )
-        evidence = Evidence(
-            result_id=result.id,
-            execution_id=execution.id,
-            kind="execution_output",
-            claim="execution_succeeded",
-            value=False,
-            content=result.summary,
-            verified=True,
-        )
+        evidence = _build_evidence(result, execution, None, result.summary)
 
     upsert_execution(execution)
     upsert_result(result)
-    upsert_evidence(evidence)
-    return execution, result, [evidence]
+    for item in evidence:
+        upsert_evidence(item)
+    return execution, result, evidence
