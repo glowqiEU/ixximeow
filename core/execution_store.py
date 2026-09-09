@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
-from .execution import Execution
+from .execution import EXECUTION_STATUSES, Execution
 from .persistence import load_json, save_json
 
 
@@ -33,6 +33,17 @@ def find_execution_by_idempotency_key(key: str) -> Optional[Execution]:
         ),
         None,
     )
+
+
+def find_executions_by_status(status: str) -> list[Execution]:
+    if status not in EXECUTION_STATUSES:
+        raise ValueError(f"invalid execution status: {status}")
+
+    return [
+        execution
+        for execution in load_executions()
+        if execution.status == status
+    ]
 
 
 def upsert_execution(execution: Execution) -> None:
