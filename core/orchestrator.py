@@ -5,6 +5,8 @@ from .decision_evaluation_store import save_decision_evaluations
 from .decision_selection import select_decision
 from .decision_store import load_decisions, save_decisions
 from .planner import generate_candidates
+from .plan_builder import build_plan
+from .plan_store import load_plans, save_plans
 from .state_manager import apply_cancellation, apply_decision, apply_result
 from .state_store import load_state, save_state
 from .task_store import ensure_task_id, load_tasks, save_tasks
@@ -35,11 +37,17 @@ class Orchestrator:
         decisions.append(decision)
         save_decisions(decisions)
 
+        plan = build_plan(decision)
+        plans = load_plans()
+        plans.append(plan)
+        save_plans(plans)
+
         tasks = load_tasks()
 
         task = Task(
-            title=decision.action,
+            title=plan.steps[0],
             decision_id=decision.id,
+            plan_id=plan.id,
             goal_id=decision.goal_id,
         )
         task = ensure_task_id(task)
