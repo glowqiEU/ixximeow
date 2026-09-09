@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 
@@ -9,12 +9,14 @@ EVIDENCE_KINDS = {"execution_output", "external_observation", "verification"}
 
 @dataclass
 class Evidence:
-    """A traceable observation that can support an objective outcome."""
+    """A traceable, optionally verified fact that can support an objective."""
 
     result_id: str
     execution_id: str
     kind: str
-    content: str
+    claim: str
+    value: Any = None
+    content: str = ""
     source: Optional[str] = None
     verified: bool = False
     id: str = field(default_factory=lambda: str(uuid4()))
@@ -29,6 +31,8 @@ class Evidence:
             raise ValueError("evidence execution_id cannot be empty")
         if self.kind not in EVIDENCE_KINDS:
             raise ValueError(f"invalid evidence kind: {self.kind}")
+        if not self.claim.strip():
+            raise ValueError("evidence claim cannot be empty")
         if not self.content.strip():
             raise ValueError("evidence content must not be empty")
         if self.source is not None and not self.source.strip():
