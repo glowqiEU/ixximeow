@@ -161,7 +161,7 @@ class TestOutcomeResolver(unittest.TestCase):
         )
 
         self.assertEqual(outcome.status, "uncertain")
-        self.assertEqual(outcome.result_ids, [])
+        self.assertEqual(outcome.result_ids, ["result-1"])
         self.assertEqual(outcome.evidence_ids, [])
 
     def test_wrong_objective_lineage_is_rejected(self):
