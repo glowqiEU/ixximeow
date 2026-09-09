@@ -50,3 +50,17 @@ class Objective:
             raise ValueError("objective description cannot be empty")
         if not self.criteria:
             raise ValueError("objective requires at least one criterion")
+
+
+def build_objective(decision, task_id: str) -> Objective:
+    """Build the objective contract from an explicit decision contract."""
+    criteria = [ObjectiveCriterion(**item) for item in decision.criteria]
+    if not criteria:
+        criteria = [ObjectiveCriterion(claim=decision.objective, kind="exists")]
+
+    return Objective(
+        decision_id=decision.id,
+        task_id=task_id,
+        description=decision.objective,
+        criteria=criteria,
+    )
