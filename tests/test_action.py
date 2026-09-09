@@ -23,6 +23,22 @@ class TestAction(unittest.TestCase):
 
         self.assertEqual(action.input, {})
 
+    def test_action_rejects_empty_task_id(self):
+        with self.assertRaises(ValueError):
+            Action(task_id="   ", name="inspect_state")
+
+    def test_action_rejects_empty_name(self):
+        with self.assertRaises(ValueError):
+            Action(task_id="task-1", name="   ")
+
+    def test_action_rejects_unknown_permission_level(self):
+        with self.assertRaises(ValueError):
+            Action(
+                task_id="task-1",
+                name="inspect_state",
+                permission_level="telepathy",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
