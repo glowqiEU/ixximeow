@@ -32,6 +32,44 @@ class OrchestratorV2:
     def __init__(self, registry: ActionRegistry) -> None:
         self.registry = registry
 
+    def _finalize(self, task, decision, action, state, tasks):
+        execution, result, evidence = execute_action(action, self.registry)
+        verify_execution_result(task, action, execution, result)
+        for item in evidence:
+            verify_evidence(result, execution, item)
+            upsert_evidence(item)
+
+        objective = build_objective(decision, task.id)
+        outcome = resolve_outcome(decision, task, objective, [result], evidence)
+        upsert_outcome(outcome)
+        verify_outcome(decision, task, objective, [result], evidence, outcome)
+
+        if outcome.status == "achieved":
+            task = transition_task(task, "completed")
+        elif outcome.status == "not_achieved":
+            task = transition_task(task, "failed")
+        elif outcome.status == "uncertain":
+            task = transition_task(task, "uncertain")
+        else:
+            task = transition_task(task, "blocked")
+
+        task_index = next(index for index, item in enumerate(tasks) if item.id == task.id)
+        tasks[task_index] = task
+        save_tasks(tasks)
+
+        state = apply_result(state=state, task=task, result=result)
+        save_state(state)
+        append_event(
+            HistoryEvent(
+                event_type="task_executed",
+                summary=outcome.summary,
+                decision_id=decision.id,
+                task_id=task.id,
+                result_id=result.id,
+            )
+        )
+        return task, result
+
     def run(self):
         context = build_context()
         context = build_context(query=build_memory_query(context))
@@ -75,6 +113,9 @@ class OrchestratorV2:
 
         approval = check_approval(action)
         if approval is not None:
+            if approval.action_id != action.id or approval.task_id != task.id:
+                raise ValueError("approval does not match action and task")
+
             task.approval_id = approval.id
             task = transition_task(task, "waiting_approval")
             tasks[-1] = task
@@ -96,46 +137,4 @@ class OrchestratorV2:
         task = transition_task(task, "running")
         tasks[-1] = task
         save_tasks(tasks)
-
-        execution, result, evidence = execute_action(action, self.registry)
-        verify_execution_result(task, action, execution, result)
-        for item in evidence:
-            verify_evidence(result, execution, item)
-            upsert_evidence(item)
-
-        objective = build_objective(decision, task.id)
-        outcome = resolve_outcome(objective, [result], evidence)
-        upsert_outcome(outcome)
-        verify_outcome(
-            decision,
-            task,
-            objective,
-            [result],
-            evidence,
-            outcome,
-        )
-
-        if outcome.status == "achieved":
-            task = transition_task(task, "completed")
-        elif outcome.status == "not_achieved":
-            task = transition_task(task, "failed")
-        elif outcome.status == "uncertain":
-            task = transition_task(task, "uncertain")
-        else:
-            task = transition_task(task, "blocked")
-
-        tasks[-1] = task
-        save_tasks(tasks)
-
-        state = apply_result(state=state, task=task, result=result)
-        save_state(state)
-        append_event(
-            HistoryEvent(
-                event_type="task_executed",
-                summary=outcome.summary,
-                decision_id=decision.id,
-                task_id=task.id,
-                result_id=result.id,
-            )
-        )
-        return decision, task, result
+        return self._finalize(task, decision, action, state, tasks)
