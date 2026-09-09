@@ -102,9 +102,11 @@ class TestOrchestratorIntegration(unittest.TestCase):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
-        execute_result = lambda action: self._execute_with_evidence(
-            action, "post_published", True, "the post was published"
-        )
+
+        def execute_result(action, registry):
+            return self._execute_with_evidence(
+                action, "post_published", True, "the post was published"
+            )
 
         with patch("core.orchestrator_v2.execute_action", side_effect=execute_result), \
              patch("core.orchestrator_v2.build_context", return_value=context), \
@@ -131,7 +133,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
             decision_result, task, result_result = Orchestrator(self._registry()).run()
 
         self.assertEqual(decision_result.id, decision.id)
-        self.assertEqual(task.action_id, task.action_id)
+        self.assertIsNotNone(task.action_id)
         self.assertEqual(task.status, "completed")
         self.assertEqual(result_result.task_id, task.id)
         self.assertEqual(result_result.action_id, task.action_id)
@@ -141,7 +143,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
 
-        def execute_without_objective_evidence(action):
+        def execute_without_objective_evidence(action, registry):
             return self._execute_with_evidence(
                 action, "execution_succeeded", True, "handler completed"
             )
