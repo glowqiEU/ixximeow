@@ -68,6 +68,17 @@ class TestOutcomeContract(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.verify(outcome, evidence=[mismatched])
 
+    def test_blocked_outcome_accepts_each_defined_reason(self):
+        for reason in ("permission", "execution", "dependency"):
+            outcome = Outcome(
+                decision_id="decision-1",
+                task_id="task-1",
+                status="blocked",
+                summary="cannot continue",
+                block_reason=reason,
+            )
+            self.verify(outcome, results=[], evidence=[])
+
     def test_blocked_outcome_requires_explicit_reason(self):
         with self.assertRaises(ValueError):
             Outcome(
@@ -77,15 +88,15 @@ class TestOutcomeContract(unittest.TestCase):
                 summary="cannot continue",
             )
 
-    def test_blocked_outcome_accepts_defined_reason_without_fake_criterion_result(self):
-        outcome = Outcome(
-            decision_id="decision-1",
-            task_id="task-1",
-            status="blocked",
-            summary="waiting on required permission",
-            block_reason="permission",
-        )
-        self.verify(outcome, results=[], evidence=[])
+    def test_blocked_outcome_rejects_unknown_reason(self):
+        with self.assertRaises(ValueError):
+            Outcome(
+                decision_id="decision-1",
+                task_id="task-1",
+                status="blocked",
+                summary="cannot continue",
+                block_reason="network",
+            )
 
     def test_block_reason_is_not_allowed_on_non_blocked_outcome(self):
         with self.assertRaises(ValueError):
@@ -98,15 +109,18 @@ class TestOutcomeContract(unittest.TestCase):
                 block_reason="dependency",
             )
 
-    def test_blocked_outcome_rejects_unknown_reason(self):
+    def test_verify_outcome_rejects_blocked_without_reason(self):
+        class InvalidBlockedOutcome:
+            decision_id = "decision-1"
+            task_id = "task-1"
+            status = "blocked"
+            summary = "cannot continue"
+            result_ids = []
+            evidence_ids = []
+            block_reason = None
+
         with self.assertRaises(ValueError):
-            Outcome(
-                decision_id="decision-1",
-                task_id="task-1",
-                status="blocked",
-                summary="cannot continue",
-                block_reason="network",
-            )
+            self.verify(InvalidBlockedOutcome(), results=[], evidence=[])
 
 
 if __name__ == "__main__":
