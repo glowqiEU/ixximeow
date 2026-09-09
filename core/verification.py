@@ -1,16 +1,13 @@
 from .action import Action
+from .criterion_evaluator import evaluate_criteria
 from .evidence import Evidence
 from .execution import Execution
 from .models import Decision, Result, Task
+from .objective import Objective
 from .outcome import Outcome
 
 
-def verify_execution_result(
-    task: Task,
-    action: Action,
-    execution: Execution,
-    result: Result,
-) -> None:
+def verify_execution_result(task: Task, action: Action, execution: Execution, result: Result) -> None:
     """Validate that a technical result belongs to one execution lineage."""
     if action.task_id != task.id:
         raise ValueError("action does not belong to task")
@@ -30,11 +27,7 @@ def verify_execution_result(
         raise ValueError("result summary must not be empty")
 
 
-def verify_evidence(
-    result: Result,
-    execution: Execution,
-    evidence: Evidence,
-) -> None:
+def verify_evidence(result: Result, execution: Execution, evidence: Evidence) -> None:
     """Validate that evidence is attached to the result that produced it."""
     if evidence.result_id != result.id:
         raise ValueError("evidence does not belong to result")
@@ -45,21 +38,24 @@ def verify_evidence(
 def verify_outcome(
     decision: Decision,
     task: Task,
+    objective: Objective,
     results: list[Result],
     evidence: list[Evidence],
     outcome: Outcome,
 ) -> None:
-    """Validate that an objective outcome is supported by recorded artifacts."""
+    """Validate provenance and recompute outcome status from objective criteria."""
     if task.decision_id != decision.id:
         raise ValueError("task does not belong to decision")
+    if objective.decision_id != decision.id:
+        raise ValueError("objective does not belong to decision")
+    if objective.task_id != task.id:
+        raise ValueError("objective does not belong to task")
     if outcome.decision_id != decision.id:
         raise ValueError("outcome does not belong to decision")
     if outcome.task_id != task.id:
         raise ValueError("outcome does not belong to task")
-    if outcome.status == "achieved" and not outcome.evidence_ids:
-        raise ValueError("achieved outcome requires evidence")
-    if outcome.status != "blocked" and not outcome.result_ids and not outcome.evidence_ids:
-        raise ValueError("outcome must reference recorded artifacts")
+    if outcome.status not in {"achieved", "not_achieved", "uncertain", "blocked"}:
+        raise ValueError("invalid outcome status")
 
     result_by_id = {result.id: result for result in results}
     evidence_by_id = {item.id: item for item in evidence}
@@ -84,5 +80,31 @@ def verify_outcome(
             raise ValueError("outcome evidence execution does not match result")
         if item.result_id not in outcome.result_ids:
             raise ValueError("outcome evidence must reference a listed result")
-        if outcome.status == "achieved" and not item.verified:
-            raise ValueError("achieved outcome requires verified evidence")
+
+    if outcome.status == "blocked":
+        return
+
+    valid_evidence = [
+        item
+        for item in evidence
+        if item.result_id in result_by_id
+        and result_by_id[item.result_id].task_id == task.id
+        and item.execution_id == result_by_id[item.result_id].execution_id
+    ]
+    evaluations = evaluate_criteria(objective.criteria, valid_evidence)
+    statuses = [evaluation.status for evaluation in evaluations]
+
+    expected_status = (
+        "achieved"
+        if all(status == "passed" for status in statuses)
+        else "not_achieved"
+        if "failed" in statuses
+        else "uncertain"
+    )
+
+    if outcome.status == "achieved" and not outcome.evidence_ids:
+        raise ValueError("achieved outcome requires evidence")
+    if outcome.status != "blocked" and not outcome.result_ids and not outcome.evidence_ids:
+        raise ValueError("outcome must reference recorded artifacts")
+    if outcome.status != expected_status:
+        raise ValueError("outcome status does not match deterministic criterion evaluation")
