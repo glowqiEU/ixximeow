@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from .outcome import Outcome
 from .persistence import load_json, save_json
@@ -16,14 +17,14 @@ def load_outcomes() -> list[Outcome]:
     return [Outcome(**item) for item in data]
 
 
-def find_outcome_by_id(outcome_id: str) -> Outcome | None:
+def find_outcome_by_id(outcome_id: str) -> Optional[Outcome]:
     return next(
         (outcome for outcome in load_outcomes() if outcome.id == outcome_id),
         None,
     )
 
 
-def find_outcome_by_task_id(task_id: str) -> Outcome | None:
+def find_outcome_by_task_id(task_id: str) -> Optional[Outcome]:
     return next(
         (outcome for outcome in load_outcomes() if outcome.task_id == task_id),
         None,
