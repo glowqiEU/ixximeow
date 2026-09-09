@@ -31,21 +31,6 @@ def resolve_outcome(
     ]
 
     evaluations = evaluate_criteria(objective.criteria, valid_evidence)
-    referenced_result_ids = list(
-        dict.fromkeys(
-            evidence_item.result_id
-            for evaluation in evaluations
-            for evidence_item in valid_evidence
-            if evidence_item.id in evaluation.evidence_ids
-        )
-    )
-    referenced_evidence_ids = list(
-        dict.fromkeys(
-            evidence_id
-            for evaluation in evaluations
-            for evidence_id in evaluation.evidence_ids
-        )
-    )
 
     statuses = [evaluation.status for evaluation in evaluations]
 
@@ -58,6 +43,12 @@ def resolve_outcome(
     else:
         status = "uncertain"
         summary = "objective could not be fully evaluated from verified evidence"
+
+    # The outcome records the artifacts that establish what was actually
+    # observed during the task, not only evidence that happened to satisfy a
+    # criterion. This preserves provenance for uncertain/not_achieved outcomes.
+    referenced_result_ids = list(result_by_id)
+    referenced_evidence_ids = [item.id for item in valid_evidence]
 
     return Outcome(
         decision_id=decision.id,
