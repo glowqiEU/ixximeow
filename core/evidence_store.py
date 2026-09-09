@@ -16,6 +16,17 @@ def load_evidence() -> list[Evidence]:
     return [Evidence(**item) for item in data]
 
 
+def find_evidence_by_id(evidence_id: str) -> Evidence | None:
+    return next(
+        (item for item in load_evidence() if item.id == evidence_id),
+        None,
+    )
+
+
+def find_evidence_by_result_id(result_id: str) -> list[Evidence]:
+    return [item for item in load_evidence() if item.result_id == result_id]
+
+
 def upsert_evidence(item: Evidence) -> None:
     items = load_evidence()
     for index, existing in enumerate(items):
