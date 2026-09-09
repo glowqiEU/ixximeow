@@ -74,6 +74,52 @@ class TestExecutionService(unittest.TestCase):
             self.assertEqual(evidence[0].value, False)
 
 
+    def test_duplicate_action_is_rejected_before_handler_runs(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            calls = []
+
+            def handler(action):
+                calls.append(action.id)
+                return {"summary": "published"}
+
+            registry.register("publish_post", handler)
+            action = Action(
+                task_id="task-1",
+                name="publish_post",
+                id="action-1",
+            )
+
+            import core.evidence_store as evidence_store
+            import core.execution_store as execution_store
+            import core.result_store as result_store
+
+            original = (
+                evidence_store.EVIDENCE_FILE,
+                execution_store.EXECUTIONS_FILE,
+                result_store.RESULTS_FILE,
+            )
+
+            evidence_store.EVIDENCE_FILE = root / "evidence.json"
+            execution_store.EXECUTIONS_FILE = root / "executions.json"
+            result_store.RESULTS_FILE = root / "results.json"
+
+            try:
+                execute_action(action, registry)
+
+                with self.assertRaises(ValueError):
+                    execute_action(action, registry)
+            finally:
+                (
+                    evidence_store.EVIDENCE_FILE,
+                    execution_store.EXECUTIONS_FILE,
+                    result_store.RESULTS_FILE,
+                ) = original
+
+            self.assertEqual(calls, ["action-1"])
+
+
     def test_duplicate_action_execution_is_rejected_by_idempotency(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)

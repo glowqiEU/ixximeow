@@ -75,5 +75,29 @@ class TestExecutionStoreContract(unittest.TestCase):
         self.assertNotEqual(first.id, second.id)
 
 
+    def test_uncertain_execution_is_reloaded_with_same_identity(self):
+        execution = Execution(
+            action_id="action-1",
+            task_id="task-1",
+        )
+        execution.transition("running")
+        execution.transition("uncertain")
+
+        with tempfile.TemporaryDirectory() as directory:
+            execution_file = Path(directory) / "executions.json"
+
+            with patch("core.execution_store.EXECUTIONS_FILE", execution_file):
+                upsert_execution(execution)
+                recovered = find_execution_by_id(execution.id)
+
+        self.assertIsNotNone(recovered)
+        self.assertEqual(recovered.id, execution.id)
+        self.assertEqual(recovered.action_id, execution.action_id)
+        self.assertEqual(recovered.task_id, execution.task_id)
+        self.assertEqual(recovered.idempotency_key, execution.idempotency_key)
+        self.assertEqual(recovered.status, "uncertain")
+        self.assertEqual(recovered.attempt, 1)
+
+
 if __name__ == "__main__":
     unittest.main()
