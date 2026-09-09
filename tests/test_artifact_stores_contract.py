@@ -104,6 +104,39 @@ class TestArtifactStoresContract(unittest.TestCase):
         self.assertEqual(by_id.id, "outcome-1")
         self.assertEqual(by_task.id, "outcome-1")
 
+    def test_outcome_store_rejects_second_outcome_for_same_task(self):
+        first = Outcome(
+            decision_id="decision-1",
+            task_id="task-1",
+            status="uncertain",
+            summary="awaiting evidence",
+            id="outcome-1",
+        )
+        second = Outcome(
+            decision_id="decision-1",
+            task_id="task-1",
+            status="achieved",
+            summary="evidence received",
+            result_ids=["result-1"],
+            evidence_ids=["evidence-1"],
+            id="outcome-2",
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            outcome_file = Path(directory) / "outcomes.json"
+            with patch("core.outcome_store.OUTCOMES_FILE", outcome_file):
+                upsert_outcome(first)
+                with self.assertRaises(ValueError):
+                    upsert_outcome(second)
+
+                outcomes = [
+                    find_outcome_by_id("outcome-1"),
+                    find_outcome_by_id("outcome-2"),
+                ]
+
+        self.assertIsNotNone(outcomes[0])
+        self.assertIsNone(outcomes[1])
+
     def test_outcome_store_upsert_does_not_duplicate_identity(self):
         outcome = Outcome(
             decision_id="decision-1",
