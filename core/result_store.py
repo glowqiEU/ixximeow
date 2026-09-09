@@ -1,5 +1,4 @@
 from pathlib import Path
-from uuid import uuid4
 
 from .models import Result
 from .persistence import load_json, save_json
@@ -17,8 +16,27 @@ def load_results() -> list[Result]:
     return [Result(**item) for item in data]
 
 
-def ensure_result_id(result: Result) -> Result:
-    if result.id is None:
-        result.id = str(uuid4())
+def find_result_by_id(result_id: str) -> Result | None:
+    return next(
+        (result for result in load_results() if result.id == result_id),
+        None,
+    )
 
-    return result
+
+def find_result_by_execution_id(execution_id: str) -> Result | None:
+    return next(
+        (result for result in load_results() if result.execution_id == execution_id),
+        None,
+    )
+
+
+def upsert_result(result: Result) -> None:
+    results = load_results()
+    for index, existing in enumerate(results):
+        if existing.id == result.id:
+            results[index] = result
+            save_results(results)
+            return
+
+    results.append(result)
+    save_results(results)
