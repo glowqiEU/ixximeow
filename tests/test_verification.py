@@ -14,6 +14,7 @@ class TestExecutionVerification(unittest.TestCase):
         self.execution = Execution(
             action_id="action-1",
             task_id="task-1",
+            status="succeeded",
             id="execution-1",
         )
         self.result = Result(

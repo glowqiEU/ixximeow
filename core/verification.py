@@ -26,6 +26,17 @@ def verify_execution_result(task: Task, action: Action, execution: Execution, re
     if not result.summary.strip():
         raise ValueError("result summary must not be empty")
 
+    if execution.status == "succeeded" and not result.success:
+        raise ValueError("successful execution requires successful result")
+
+    if execution.status == "failed" and result.success:
+        raise ValueError("failed execution cannot have successful result")
+
+    if execution.status in {"pending", "running", "uncertain"}:
+        raise ValueError(
+            f"execution status cannot be verified with a final result: {execution.status}"
+        )
+
 
 def verify_evidence(result: Result, execution: Execution, evidence: Evidence) -> None:
     """Validate that evidence is attached to the result that produced it."""
