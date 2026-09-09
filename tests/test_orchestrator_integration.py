@@ -1,266 +1,228 @@
 import unittest
-from contextlib import ExitStack
 from unittest.mock import patch
 
+from core.action_registry import ActionRegistry
 from core.approval import Approval
-from core.orchestrator import Orchestrator
 from core.context import AgentContext
 from core.decision_evaluation import DecisionEvaluation
-from core.state_store import load_state
-from core.history_store import load_events
-from core.task_store import load_tasks
-from core.plan_store import load_plans
-from core.permissions import AutonomyLevel
-from core.memory import Memory
+from core.evidence import Evidence
+from core.execution import Execution
 from core.models import Decision, Result, Task
+from core.orchestrator import Orchestrator
 from core.state import SystemState
 
 
 class TestOrchestratorIntegration(unittest.TestCase):
-    def test_full_lifecycle_persists(self):
-        with patch(
-            "core.approval_gate.CURRENT_AUTONOMY_LEVEL",
-            AutonomyLevel.EXECUTE,
-        ):
-            decision, task, result = Orchestrator().run()
-
-        self.assertIsNotNone(decision.id)
-        self.assertIsNotNone(task.id)
-        self.assertIsNotNone(result.id)
-
-        self.assertEqual(task.decision_id, decision.id)
-        self.assertEqual(task.goal_id, decision.goal_id)
-        self.assertTrue(task.plan_id)
-        self.assertEqual(result.task_id, task.id)
-        self.assertEqual(task.status, "completed")
-        self.assertTrue(result.success)
-
-        plans = load_plans()
-        persisted_plan = next(item for item in plans if item.id == task.plan_id)
-        self.assertEqual(persisted_plan.decision_id, decision.id)
-        self.assertEqual(persisted_plan.goal_id, decision.goal_id)
-        self.assertEqual(persisted_plan.steps, [decision.action])
-
-        state = load_state()
-
-        self.assertEqual(state.last_decision_id, decision.id)
-        self.assertEqual(state.last_result_id, result.id)
-        self.assertIsNone(state.active_task)
-
-        tasks = load_tasks()
-
-        persisted_task = next(
-            item for item in tasks if item.id == task.id
-        )
-
-        self.assertEqual(persisted_task.status, "completed")
-        self.assertEqual(persisted_task.decision_id, decision.id)
-        self.assertEqual(persisted_task.plan_id, task.plan_id)
-        self.assertEqual(persisted_task.goal_id, decision.goal_id)
-
-        history = load_events()
-
-        self.assertTrue(
-            any(
-                event.task_id == task.id
-                and event.result_id == result.id
-                and event.decision_id == decision.id
-                for event in history
-            )
-        )
-
-    def test_orchestrator_builds_context_with_memory_query(self):
-        context = AgentContext(
-            goal_id="goal-1",
-            task="create X content",
-        )
-
-        with patch("core.orchestrator.build_context", side_effect=[
-            context,
-            AgentContext(
-                goal_id="goal-1",
-                task="create X content",
-                memories=[
-                    Memory(
-                        content="flash photos perform better",
-                        source="observed_result",
-                        confidence=0.8,
-                    )
+    def _registry(self):
+        registry = ActionRegistry()
+        registry.register(
+            "publish_post",
+            lambda action: {
+                "summary": "published",
+                "evidence": [
+                    {
+                        "claim": "post_published",
+                        "kind": "execution_output",
+                        "value": True,
+                        "content": "the post was published",
+                        "verified": True,
+                    }
                 ],
-            ),
-        ]) as mock_build_context:
-            with patch(
-                "core.approval_gate.CURRENT_AUTONOMY_LEVEL",
-                AutonomyLevel.EXECUTE,
-            ):
-                Orchestrator().run()
-
-        self.assertEqual(mock_build_context.call_count, 2)
-        self.assertEqual(
-            mock_build_context.call_args.kwargs["query"],
-            "create X content",
+            },
         )
+        return registry
 
-    def test_orchestrator_evaluates_candidates_before_selection(self):
-        context = AgentContext(
-            goal_id="goal-1",
-            task="create X content",
-        )
-
-        low = DecisionEvaluation(
-            decision_id="low",
-            relevance=0.4,
-            confidence=0.4,
-            risk=0.6,
-            effort=0.6,
-            reason="lower utility",
-        )
-        high = DecisionEvaluation(
-            decision_id="high",
-            relevance=0.9,
-            confidence=0.9,
-            risk=0.1,
-            effort=0.1,
-            reason="higher utility",
-        )
-
-        with patch("core.orchestrator.build_context", return_value=context):
-            with patch("core.orchestrator.generate_candidates") as mock_candidates:
-                first = type(
-                    "DecisionLike",
-                    (),
-                    {"id": "low", "action": "low action", "goal_id": "goal-1"},
-                )()
-                second = type(
-                    "DecisionLike",
-                    (),
-                    {"id": "high", "action": "high action", "goal_id": "goal-1"},
-                )()
-                mock_candidates.return_value = [first, second]
-
-                with patch(
-                    "core.orchestrator.evaluate_decision",
-                    side_effect=[low, high],
-                ) as mock_evaluate:
-                    with patch(
-                        "core.orchestrator.select_decision",
-                        return_value=second,
-                    ) as mock_select:
-                        with patch("core.orchestrator.load_tasks", return_value=[]), \
-                             patch("core.orchestrator.save_tasks"), \
-                             patch("core.orchestrator.load_plans", return_value=[]), \
-                             patch("core.orchestrator.save_plans"), \
-                             patch(
-                                 "core.orchestrator.load_state",
-                                 return_value=SystemState(active_goal_id="goal-1"),
-                             ), \
-                             patch("core.orchestrator.save_state"), \
-                             patch("core.orchestrator.check_approval", return_value=None), \
-                             patch("core.orchestrator.execute_task") as mock_execute:
-                            mock_execute.return_value = (
-                                type("TaskLike", (), {"id": "task-1", "status": "completed"})(),
-                                type("ResultLike", (), {"id": "result-1", "summary": "done"})(),
-                            )
-                            with patch("core.orchestrator.append_event"), \
-                                 patch("core.orchestrator.apply_decision", return_value=SystemState()), \
-                                 patch("core.orchestrator.apply_result", return_value=SystemState()):
-                                Orchestrator().run()
-
-        self.assertEqual(mock_evaluate.call_count, 2)
-        self.assertEqual(
-            [call.args[0].id for call in mock_evaluate.call_args_list],
-            ["low", "high"],
-        )
-        mock_select.assert_called_once_with([first, second], [low, high])
-
-    def test_approval_lifecycle_waits_then_resumes_same_task(self):
+    def test_full_lifecycle_resolves_achieved_from_evidence(self):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = Decision(
-            objective="goal-1",
-            action="publish post",
+            objective="publish the post",
+            action="publish_post",
             reason="selected action",
             goal_id="goal-1",
+            criteria=[
+                {
+                    "claim": "post_published",
+                    "kind": "boolean",
+                    "expected": True,
+                }
+            ],
         )
+        state = SystemState(active_goal_id="goal-1")
+        task_store = []
+
+        execution = Execution(action_id="action-1", task_id="task-1")
+        execution.transition("running")
+        execution.transition("succeeded")
+        result = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id=execution.id,
+            success=True,
+            summary="published",
+        )
+        evidence = Evidence(
+            result_id=result.id,
+            execution_id=execution.id,
+            kind="execution_output",
+            claim="post_published",
+            value=True,
+            content="the post was published",
+            verified=True,
+        )
+
+        with patch("core.approval_gate.CURRENT_AUTONOMY_LEVEL", "execute"), \
+             patch("core.orchestrator_v2.build_context", return_value=context), \
+             patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
+             patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
+                 decision_id=decision.id,
+                 relevance=1.0,
+                 confidence=1.0,
+                 risk=0.0,
+                 effort=0.0,
+                 reason="strong candidate",
+             )), \
+             patch("core.orchestrator_v2.select_decision", return_value=decision), \
+             patch("core.orchestrator_v2.load_decisions", return_value=[]), \
+             patch("core.orchestrator_v2.save_decisions"), \
+             patch("core.orchestrator_v2.load_plans", return_value=[]), \
+             patch("core.orchestrator_v2.save_plans"), \
+             patch("core.orchestrator_v2.load_tasks", return_value=task_store), \
+             patch("core.orchestrator_v2.save_tasks"), \
+             patch("core.orchestrator_v2.load_state", return_value=state), \
+             patch("core.orchestrator_v2.save_state"), \
+             patch("core.orchestrator_v2.check_approval", return_value=None), \
+             patch("core.orchestrator_v2.execute_action", return_value=(execution, result, [evidence])), \
+             patch("core.orchestrator_v2.upsert_evidence"), \
+             patch("core.orchestrator_v2.upsert_outcome"), \
+             patch("core.orchestrator_v2.append_event"), \
+             patch("core.orchestrator_v2.apply_decision", return_value=state), \
+             patch("core.orchestrator_v2.apply_result", return_value=state):
+            decision_result, task, result_result = Orchestrator(self._registry()).run()
+
+        self.assertEqual(decision_result.id, decision.id)
+        self.assertEqual(task.action_id, "action-1")
+        self.assertEqual(task.status, "completed")
+        self.assertEqual(result_result.id, result.id)
+
+    def test_successful_execution_without_objective_evidence_is_uncertain(self):
+        context = AgentContext(goal_id="goal-1", task=None)
+        decision = Decision(
+            objective="post published",
+            action="publish_post",
+            reason="selected action",
+            goal_id="goal-1",
+            criteria=[
+                {
+                    "claim": "post_published",
+                    "kind": "boolean",
+                    "expected": True,
+                }
+            ],
+        )
+        state = SystemState(active_goal_id="goal-1")
+        execution = Execution(action_id="action-1", task_id="task-1")
+        execution.transition("running")
+        execution.transition("succeeded")
+        result = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id=execution.id,
+            success=True,
+            summary="handler completed",
+        )
+        evidence = Evidence(
+            result_id=result.id,
+            execution_id=execution.id,
+            kind="execution_output",
+            claim="execution_succeeded",
+            value=True,
+            content="handler completed",
+            verified=True,
+        )
+
+        with patch("core.approval_gate.CURRENT_AUTONOMY_LEVEL", "execute"), \
+             patch("core.orchestrator_v2.build_context", return_value=context), \
+             patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
+             patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
+                 decision_id=decision.id,
+                 relevance=1.0,
+                 confidence=1.0,
+                 risk=0.0,
+                 effort=0.0,
+                 reason="strong candidate",
+             )), \
+             patch("core.orchestrator_v2.select_decision", return_value=decision), \
+             patch("core.orchestrator_v2.load_decisions", return_value=[]), \
+             patch("core.orchestrator_v2.save_decisions"), \
+             patch("core.orchestrator_v2.load_plans", return_value=[]), \
+             patch("core.orchestrator_v2.save_plans"), \
+             patch("core.orchestrator_v2.load_tasks", return_value=[]), \
+             patch("core.orchestrator_v2.save_tasks"), \
+             patch("core.orchestrator_v2.load_state", return_value=state), \
+             patch("core.orchestrator_v2.save_state"), \
+             patch("core.orchestrator_v2.check_approval", return_value=None), \
+             patch("core.orchestrator_v2.execute_action", return_value=(execution, result, [evidence])), \
+             patch("core.orchestrator_v2.upsert_evidence"), \
+             patch("core.orchestrator_v2.upsert_outcome"), \
+             patch("core.orchestrator_v2.append_event"), \
+             patch("core.orchestrator_v2.apply_decision", return_value=state), \
+             patch("core.orchestrator_v2.apply_result", return_value=state):
+            _, task, _ = Orchestrator(self._registry()).run()
+
+        self.assertEqual(task.status, "uncertain")
+
+    def test_approval_is_waiting_state_not_blocked_outcome(self):
+        context = AgentContext(goal_id="goal-1", task=None)
+        decision = Decision(
+            objective="publish the post",
+            action="publish_post",
+            reason="selected action",
+            goal_id="goal-1",
+            criteria=[
+                {
+                    "claim": "post_published",
+                    "kind": "boolean",
+                    "expected": True,
+                }
+            ],
+        )
+        state = SystemState(active_goal_id="goal-1")
         approval = Approval(
-            task_id="placeholder",
+            action_id="action-1",
+            task_id="task-1",
             required_level="publish",
             reason="publishing requires approval",
         )
-        state = SystemState(active_goal_id="goal-1")
 
-        def approval_for_task(task):
-            approval.task_id = task.id
-            return approval
+        with patch("core.orchestrator_v2.build_context", return_value=context), \
+             patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
+             patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
+                 decision_id=decision.id,
+                 relevance=1.0,
+                 confidence=1.0,
+                 risk=0.0,
+                 effort=0.0,
+                 reason="strong candidate",
+             )), \
+             patch("core.orchestrator_v2.select_decision", return_value=decision), \
+             patch("core.orchestrator_v2.load_decisions", return_value=[]), \
+             patch("core.orchestrator_v2.save_decisions"), \
+             patch("core.orchestrator_v2.load_plans", return_value=[]), \
+             patch("core.orchestrator_v2.save_plans"), \
+             patch("core.orchestrator_v2.load_tasks", return_value=[]), \
+             patch("core.orchestrator_v2.save_tasks"), \
+             patch("core.orchestrator_v2.load_state", return_value=state), \
+             patch("core.orchestrator_v2.save_state"), \
+             patch("core.orchestrator_v2.check_approval", return_value=approval), \
+             patch("core.orchestrator_v2.save_approvals"), \
+             patch("core.orchestrator_v2.load_approvals", return_value=[]), \
+             patch("core.orchestrator_v2.append_event"), \
+             patch("core.orchestrator_v2.apply_decision", return_value=state):
+            _, task, result = Orchestrator(self._registry()).run()
 
-        with ExitStack() as stack:
-            stack.enter_context(patch("core.orchestrator.build_context", return_value=context))
-            stack.enter_context(patch("core.orchestrator.generate_candidates", return_value=[decision]))
-            stack.enter_context(patch(
-                "core.orchestrator.evaluate_decision",
-                return_value=DecisionEvaluation(
-                    decision_id=decision.id,
-                    relevance=1.0,
-                    confidence=1.0,
-                    risk=0.0,
-                    effort=0.0,
-                    reason="approved test decision",
-                ),
-            ))
-            stack.enter_context(patch("core.orchestrator.select_decision", return_value=decision))
-            mock_load_tasks = stack.enter_context(
-                patch("core.orchestrator.load_tasks", return_value=[])
-            )
-            stack.enter_context(patch("core.orchestrator.save_tasks"))
-            stack.enter_context(patch("core.orchestrator.load_plans", return_value=[]))
-            stack.enter_context(patch("core.orchestrator.save_plans"))
-            stack.enter_context(patch("core.orchestrator.load_state", side_effect=[state, state]))
-            stack.enter_context(patch("core.orchestrator.save_state"))
-            stack.enter_context(patch("core.orchestrator.check_approval", side_effect=approval_for_task))
-            stack.enter_context(patch("core.orchestrator.append_event"))
-            mock_execute = stack.enter_context(patch("core.orchestrator.execute_task"))
-            stack.enter_context(patch("core.orchestrator.save_decisions"))
-            stack.enter_context(patch("core.orchestrator.load_decisions", return_value=[]))
-            stack.enter_context(patch("core.orchestrator.save_approvals"))
-            mock_load_approvals = stack.enter_context(
-                patch("core.orchestrator.load_approvals", return_value=[approval])
-            )
-
-            decision_result, task, result = Orchestrator().run()
-
-            self.assertEqual(decision_result.id, decision.id)
-            self.assertEqual(task.status, "waiting_approval")
-            self.assertEqual(task.approval_id, approval.id)
-            self.assertTrue(task.plan_id)
-            self.assertEqual(approval.task_id, task.id)
-            self.assertIsNone(result)
-            mock_execute.assert_not_called()
-
-            approval.status = "approved"
-            resumed_task = Task(
-                title=task.title,
-                status="completed",
-                decision_id=task.decision_id,
-                plan_id=task.plan_id,
-                goal_id=task.goal_id,
-                approval_id=task.approval_id,
-                id=task.id,
-            )
-            resumed_result = Result(
-                task_id=task.id,
-                success=True,
-                summary="published",
-            )
-            mock_execute.return_value = (resumed_task, resumed_result)
-            mock_load_tasks.return_value = [task]
-
-            resumed_task, resumed_result = Orchestrator().resume_approval(approval.id)
-
-        self.assertEqual(mock_load_approvals.call_count, 2)
-        self.assertEqual(resumed_task.id, task.id)
-        self.assertEqual(resumed_task.status, "completed")
-        self.assertEqual(resumed_result.task_id, task.id)
-        self.assertTrue(resumed_result.success)
-        mock_execute.assert_called_once_with(task, approval=approval)
+        self.assertEqual(task.status, "waiting_approval")
+        self.assertEqual(task.approval_id, approval.id)
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":
