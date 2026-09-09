@@ -41,6 +41,7 @@ class Task:
     decision_id: Optional[str] = None
     plan_id: Optional[str] = None
     goal_id: Optional[str] = None
+    action_id: Optional[str] = None
     approval_id: Optional[str] = None
     required_level: str = "execute"
     id: str = field(default_factory=new_id)
