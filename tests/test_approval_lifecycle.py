@@ -7,6 +7,7 @@ from core.approval_lifecycle import transition_approval
 class TestApprovalLifecycle(unittest.TestCase):
     def test_pending_can_be_approved(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
@@ -18,6 +19,7 @@ class TestApprovalLifecycle(unittest.TestCase):
 
     def test_pending_can_be_rejected(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
@@ -29,6 +31,7 @@ class TestApprovalLifecycle(unittest.TestCase):
 
     def test_approved_cannot_change(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
@@ -40,6 +43,7 @@ class TestApprovalLifecycle(unittest.TestCase):
 
     def test_rejected_cannot_change(self):
         approval = Approval(
+            action_id="action-123",
             task_id="task-123",
             required_level="publish",
             reason="publishing requires permission",
