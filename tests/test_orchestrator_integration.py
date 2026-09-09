@@ -123,16 +123,15 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator_v2.load_tasks", return_value=[]), \
              patch("core.orchestrator_v2.save_tasks"), \
              patch("core.orchestrator_v2.load_state", return_value=state), \
-             patch("core.orchestrator_v2.save_state"), \
              patch("core.orchestrator_v2.check_approval", return_value=None), \
              patch("core.orchestrator_v2.upsert_evidence"), \
              patch("core.orchestrator_v2.upsert_outcome"), \
              patch("core.orchestrator_v2.append_event"), \
              patch("core.orchestrator_v2.apply_decision", return_value=state), \
              patch("core.orchestrator_v2.apply_result", return_value=state):
-            decision_result, task, result_result = Orchestrator(self._registry()).run()
+            task, result_result = Orchestrator(self._registry()).run()
 
-        self.assertEqual(decision_result.id, decision.id)
+        self.assertEqual(task.decision_id, decision.id)
         self.assertIsNotNone(task.action_id)
         self.assertEqual(task.status, "completed")
         self.assertEqual(result_result.task_id, task.id)
@@ -163,16 +162,17 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator_v2.load_tasks", return_value=[]), \
              patch("core.orchestrator_v2.save_tasks"), \
              patch("core.orchestrator_v2.load_state", return_value=state), \
-             patch("core.orchestrator_v2.save_state"), \
              patch("core.orchestrator_v2.check_approval", return_value=None), \
              patch("core.orchestrator_v2.upsert_evidence"), \
              patch("core.orchestrator_v2.upsert_outcome"), \
              patch("core.orchestrator_v2.append_event"), \
              patch("core.orchestrator_v2.apply_decision", return_value=state), \
              patch("core.orchestrator_v2.apply_result", return_value=state):
-            _, task, _ = Orchestrator(self._registry()).run()
+            task, result_result = Orchestrator(self._registry()).run()
 
         self.assertEqual(task.status, "uncertain")
+        self.assertIsNotNone(result_result)
+        self.assertEqual(result_result.task_id, task.id)
 
     def test_approval_is_waiting_state_not_blocked_outcome(self):
         context = AgentContext(goal_id="goal-1", task=None)
