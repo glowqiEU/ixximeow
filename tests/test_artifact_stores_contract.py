@@ -32,6 +32,36 @@ class TestArtifactStoresContract(unittest.TestCase):
         self.assertEqual(by_id.id, "result-1")
         self.assertEqual(by_execution.id, "result-1")
 
+    def test_result_store_rejects_second_result_for_same_execution(self):
+        first = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="first result",
+            id="result-1",
+        )
+        second = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="second result",
+            id="result-2",
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            result_file = Path(directory) / "results.json"
+            with patch("core.result_store.RESULTS_FILE", result_file):
+                upsert_result(first)
+                with self.assertRaises(ValueError):
+                    upsert_result(second)
+
+                results = [find_result_by_id("result-1"), find_result_by_id("result-2")]
+
+        self.assertIsNotNone(results[0])
+        self.assertIsNone(results[1])
+
     def test_evidence_store_persists_and_indexes_result(self):
         evidence = Evidence(
             result_id="result-1",
