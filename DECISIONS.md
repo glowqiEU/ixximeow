@@ -10,7 +10,7 @@ decisions should explain not only what was chosen, but why.
 
 ### decision
 
-the fundamental object of ixximeow is the decision.
+the fundamental object of ixximeOW is the decision.
 
 ### why
 
@@ -449,3 +449,4 @@ for the current MVP, `Plan` deliberately contains one step. this establishes the
 ### status
 
 accepted
+
