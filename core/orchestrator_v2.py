@@ -13,7 +13,7 @@ from .history import HistoryEvent
 from .history_store import append_event
 from .memory_query import build_memory_query
 from .models import Task
-from .objective import Objective
+from .objective import build_objective
 from .outcome_resolver import resolve_outcome
 from .outcome_store import upsert_outcome
 from .plan_builder import build_plan
@@ -70,6 +70,8 @@ class OrchestratorV2:
             permission_level=task.required_level,
         )
         task.action_id = action.id
+        tasks[-1] = task
+        save_tasks(tasks)
 
         approval = check_approval(action)
         if approval is not None:
@@ -101,12 +103,7 @@ class OrchestratorV2:
             verify_evidence(result, execution, item)
             upsert_evidence(item)
 
-        objective = Objective(
-            decision_id=decision.id,
-            task_id=task.id,
-            description=decision.objective,
-            criteria=[],
-        )
+        objective = build_objective(decision, task.id)
         outcome = resolve_outcome(objective, [result], evidence)
         upsert_outcome(outcome)
         verify_outcome(
@@ -118,7 +115,15 @@ class OrchestratorV2:
             outcome,
         )
 
-        task = transition_task(task, "completed") if outcome.status == "achieved" else transition_task(task, "failed")
+        if outcome.status == "achieved":
+            task = transition_task(task, "completed")
+        elif outcome.status == "not_achieved":
+            task = transition_task(task, "failed")
+        elif outcome.status == "uncertain":
+            task = transition_task(task, "uncertain")
+        else:
+            task = transition_task(task, "blocked")
+
         tasks[-1] = task
         save_tasks(tasks)
 
