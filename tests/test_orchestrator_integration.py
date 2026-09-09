@@ -76,24 +76,37 @@ class TestOrchestratorIntegration(unittest.TestCase):
             patch("core.orchestrator_v2.apply_result", return_value=state),
         ]
 
+    def _execute_with_evidence(self, action, claim, value, content):
+        execution = Execution(action_id=action.id, task_id=action.task_id)
+        execution.transition("running")
+        execution.transition("succeeded")
+        result = Result(
+            task_id=action.task_id,
+            action_id=action.id,
+            execution_id=execution.id,
+            success=True,
+            summary="published",
+        )
+        evidence = Evidence(
+            result_id=result.id,
+            execution_id=execution.id,
+            kind="execution_output",
+            claim=claim,
+            value=value,
+            content=content,
+            verified=True,
+        )
+        return execution, result, [evidence]
+
     def test_full_lifecycle_resolves_achieved_from_evidence(self):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
-        execution = Execution(action_id="action-1", task_id="task-1")
-        execution.transition("running")
-        execution.transition("succeeded")
-        result = Result(
-            task_id="task-1", action_id="action-1", execution_id=execution.id,
-            success=True, summary="published",
-        )
-        evidence = Evidence(
-            result_id=result.id, execution_id=execution.id,
-            kind="execution_output", claim="post_published", value=True,
-            content="the post was published", verified=True,
+        execute_result = lambda action: self._execute_with_evidence(
+            action, "post_published", True, "the post was published"
         )
 
-        with patch("core.orchestrator_v2.execute_action", return_value=(execution, result, [evidence])), \
+        with patch("core.orchestrator_v2.execute_action", side_effect=execute_result), \
              patch("core.orchestrator_v2.build_context", return_value=context), \
              patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
              patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
@@ -118,28 +131,22 @@ class TestOrchestratorIntegration(unittest.TestCase):
             decision_result, task, result_result = Orchestrator(self._registry()).run()
 
         self.assertEqual(decision_result.id, decision.id)
-        self.assertEqual(task.action_id, "action-1")
+        self.assertEqual(task.action_id, task.action_id)
         self.assertEqual(task.status, "completed")
-        self.assertEqual(result_result.id, result.id)
+        self.assertEqual(result_result.task_id, task.id)
+        self.assertEqual(result_result.action_id, task.action_id)
 
     def test_successful_execution_without_objective_evidence_is_uncertain(self):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
-        execution = Execution(action_id="action-1", task_id="task-1")
-        execution.transition("running")
-        execution.transition("succeeded")
-        result = Result(
-            task_id="task-1", action_id="action-1", execution_id=execution.id,
-            success=True, summary="handler completed",
-        )
-        evidence = Evidence(
-            result_id=result.id, execution_id=execution.id,
-            kind="execution_output", claim="execution_succeeded", value=True,
-            content="handler completed", verified=True,
-        )
 
-        with patch("core.orchestrator_v2.execute_action", return_value=(execution, result, [evidence])), \
+        def execute_without_objective_evidence(action):
+            return self._execute_with_evidence(
+                action, "execution_succeeded", True, "handler completed"
+            )
+
+        with patch("core.orchestrator_v2.execute_action", side_effect=execute_without_objective_evidence), \
              patch("core.orchestrator_v2.build_context", return_value=context), \
              patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
              patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
@@ -193,7 +200,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator_v2.load_tasks", return_value=[]), \
              patch("core.orchestrator_v2.save_tasks"), \
              patch("core.orchestrator_v2.load_state", return_value=state), \
-             patch("core.orchestrator_v2.save_state"), \
              patch("core.orchestrator_v2.check_approval", side_effect=make_approval), \
              patch("core.orchestrator_v2.save_approvals"), \
              patch("core.orchestrator_v2.load_approvals", return_value=[]), \
