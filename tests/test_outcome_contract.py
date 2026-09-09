@@ -43,6 +43,8 @@ class TestOutcomeContract(unittest.TestCase):
             result_id="result-1",
             execution_id="execution-1",
             kind="external_observation",
+            claim="post_visible",
+            value=True,
             content="post is visible on the platform",
             source="platform check",
             verified=True,
@@ -107,6 +109,8 @@ class TestOutcomeContract(unittest.TestCase):
             result_id="result-1",
             execution_id="execution-1",
             kind="external_observation",
+            claim="post_visible",
+            value=True,
             content="post appears to be visible",
             verified=False,
             id="evidence-2",
@@ -161,6 +165,8 @@ class TestOutcomeContract(unittest.TestCase):
             result_id="result-2",
             execution_id="execution-2",
             kind="execution_output",
+            claim="post_visible",
+            value=True,
             content="other output",
             id="evidence-2",
         )
@@ -179,6 +185,35 @@ class TestOutcomeContract(unittest.TestCase):
                 self.task,
                 [self.result, other_result],
                 [self.evidence, other_evidence],
+                outcome,
+            )
+
+    def test_evidence_execution_must_match_result_execution(self):
+        mismatched = Evidence(
+            result_id="result-1",
+            execution_id="execution-2",
+            kind="verification",
+            claim="post_visible",
+            value=True,
+            content="mismatched provenance",
+            verified=True,
+            id="evidence-3",
+        )
+        outcome = Outcome(
+            decision_id="decision-1",
+            task_id="task-1",
+            status="achieved",
+            summary="done",
+            result_ids=["result-1"],
+            evidence_ids=["evidence-3"],
+        )
+
+        with self.assertRaises(ValueError):
+            verify_outcome(
+                self.decision,
+                self.task,
+                [self.result],
+                [mismatched],
                 outcome,
             )
 
