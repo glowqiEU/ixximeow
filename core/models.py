@@ -16,6 +16,7 @@ class Decision:
     priority: int = 0
     status: str = "proposed"
     goal_id: Optional[str] = None
+    criteria: List[dict] = field(default_factory=list)
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
