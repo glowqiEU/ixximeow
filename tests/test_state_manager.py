@@ -30,7 +30,13 @@ class TestStateManager(unittest.TestCase):
     def test_apply_result_clears_active_task(self):
         state = SystemState(active_task="task-1", last_decision_id="decision-1")
         task = Task("post", id="task-1")
-        result = Result("task-1", True, "done")
+        result = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="done",
+        )
 
         state = apply_result(state, task, result)
 
@@ -40,7 +46,13 @@ class TestStateManager(unittest.TestCase):
     def test_apply_result_rejects_result_for_different_task(self):
         state = SystemState(active_task="task-1")
         task = Task("post", id="task-1")
-        result = Result("task-2", True, "done")
+        result = Result(
+            task_id="task-2",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="done",
+        )
 
         with self.assertRaises(ValueError):
             apply_result(state, task, result)
