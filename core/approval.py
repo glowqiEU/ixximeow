@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
+from .permissions import AutonomyLevel
+
 
 @dataclass
 class Approval:
@@ -14,3 +16,19 @@ class Approval:
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+    def __post_init__(self) -> None:
+        if not self.task_id.strip():
+            raise ValueError("approval task_id cannot be empty")
+        if not self.reason.strip():
+            raise ValueError("approval reason cannot be empty")
+
+        try:
+            AutonomyLevel[self.required_level.upper()]
+        except KeyError as exc:
+            raise ValueError(
+                f"invalid approval required level: {self.required_level}"
+            ) from exc
+
+        if self.status not in {"pending", "approved", "rejected"}:
+            raise ValueError(f"invalid approval status: {self.status}")
