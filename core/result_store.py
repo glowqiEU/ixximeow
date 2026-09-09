@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from .models import Result
 from .persistence import load_json, save_json
@@ -16,14 +17,14 @@ def load_results() -> list[Result]:
     return [Result(**item) for item in data]
 
 
-def find_result_by_id(result_id: str) -> Result | None:
+def find_result_by_id(result_id: str) -> Optional[Result]:
     return next(
         (result for result in load_results() if result.id == result_id),
         None,
     )
 
 
-def find_result_by_execution_id(execution_id: str) -> Result | None:
+def find_result_by_execution_id(execution_id: str) -> Optional[Result]:
     return next(
         (result for result in load_results() if result.execution_id == execution_id),
         None,
