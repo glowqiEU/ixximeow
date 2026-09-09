@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
-from typing import Optional
+from typing import List, Optional
 
 
 def new_id() -> str:
@@ -23,10 +23,23 @@ class Decision:
 
 
 @dataclass
+class Plan:
+    decision_id: str
+    steps: List[str]
+    goal_id: Optional[str] = None
+    status: str = "proposed"
+    id: str = field(default_factory=new_id)
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
+
+
+@dataclass
 class Task:
     title: str
     status: str = "pending"
     decision_id: Optional[str] = None
+    plan_id: Optional[str] = None
     goal_id: Optional[str] = None
     approval_id: Optional[str] = None
     required_level: str = "execute"
