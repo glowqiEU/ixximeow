@@ -43,5 +43,13 @@ def upsert_execution(execution: Execution) -> None:
             save_executions(executions)
             return
 
+    conflicting_execution = find_execution_by_idempotency_key(
+        execution.idempotency_key
+    )
+    if conflicting_execution is not None:
+        raise ValueError(
+            "execution idempotency_key already belongs to another execution"
+        )
+
     executions.append(execution)
     save_executions(executions)
