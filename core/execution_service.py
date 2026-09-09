@@ -1,8 +1,7 @@
-from collections.abc import Callable
-
 from .action import Action
 from .action_registry import ActionRegistry
 from .evidence import Evidence
+from .evidence_store import upsert_evidence
 from .execution import Execution
 from .execution_store import upsert_execution
 from .models import Result
@@ -24,7 +23,11 @@ def execute_action(
 
     try:
         output = registry.execute(action)
-        summary = output.get("summary", "action execution completed") if isinstance(output, dict) else str(output)
+        summary = (
+            output.get("summary", "action execution completed")
+            if isinstance(output, dict)
+            else str(output)
+        )
         execution.transition("succeeded")
         result = Result(
             task_id=action.task_id,
@@ -63,4 +66,5 @@ def execute_action(
 
     upsert_execution(execution)
     upsert_result(result)
+    upsert_evidence(evidence)
     return execution, result, [evidence]
