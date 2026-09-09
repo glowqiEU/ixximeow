@@ -33,6 +33,8 @@ class Orchestrator(OrchestratorV2):
             raise ValueError("approval does not belong to task")
         if task.action_id != approval.action_id:
             raise ValueError("approval does not belong to action")
+        if approval.required_level != task.required_level:
+            raise ValueError("approval permission level does not match task")
         if task.status != "waiting_approval":
             raise ValueError(f"task is not waiting for approval: {task.status}")
 

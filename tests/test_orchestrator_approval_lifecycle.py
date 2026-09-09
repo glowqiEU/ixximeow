@@ -17,6 +17,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         task = Task(
             "publish",
             status="waiting_approval",
+            required_level="publish",
             decision_id=decision.id,
             goal_id=decision.goal_id,
             action_id="action-1",
@@ -82,6 +83,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         task = Task(
             "publish",
             status="waiting_approval",
+            required_level="publish",
             action_id=approval.action_id,
             approval_id=approval.id,
             id=approval.task_id,
@@ -124,6 +126,34 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
              patch("core.orchestrator.load_tasks", return_value=[task]):
             with self.assertRaisesRegex(ValueError, "approval does not belong to action"):
                 Orchestrator(self._registry()).resume_approval(approval.id)
+
+    def test_resume_rejects_approval_with_mismatched_permission_level(self):
+        approval = Approval(
+            action_id="action-1",
+            task_id="task-1",
+            required_level="publish",
+            reason="approval required",
+            status="approved",
+            id="approval-1",
+        )
+        task = Task(
+            "publish",
+            status="waiting_approval",
+            required_level="execute",
+            action_id=approval.action_id,
+            approval_id=approval.id,
+            id=approval.task_id,
+        )
+
+        with patch("core.orchestrator.load_approvals", return_value=[approval]), \
+             patch("core.orchestrator.load_tasks", return_value=[task]), \
+             patch.object(Orchestrator, "_finalize") as finalize:
+            with self.assertRaisesRegex(
+                ValueError, "approval permission level does not match task"
+            ):
+                Orchestrator(self._registry()).resume_approval(approval.id)
+
+        finalize.assert_not_called()
 
 
 if __name__ == "__main__":
