@@ -67,6 +67,12 @@ def verify_outcome(
     if outcome.task_id != task.id:
         raise ValueError("outcome does not belong to task")
 
+    if outcome.status == "achieved" and not outcome.evidence_ids:
+        raise ValueError("achieved outcome requires evidence")
+
+    if outcome.status != "blocked" and not outcome.result_ids and not outcome.evidence_ids:
+        raise ValueError("outcome must reference recorded artifacts")
+
     result_by_id = {result.id: result for result in results}
     evidence_by_id = {item.id: item for item in evidence}
 
@@ -86,3 +92,7 @@ def verify_outcome(
             raise ValueError("evidence references unknown result")
         if result.task_id != task.id:
             raise ValueError("outcome references evidence from another task")
+        if item.result_id not in outcome.result_ids:
+            raise ValueError("outcome evidence must reference a listed result")
+        if outcome.status == "achieved" and not item.verified:
+            raise ValueError("achieved outcome requires verified evidence")
