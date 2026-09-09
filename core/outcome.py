@@ -5,6 +5,7 @@ from uuid import uuid4
 
 
 OUTCOME_STATUSES = {"achieved", "not_achieved", "uncertain", "blocked"}
+BLOCK_REASONS = {"permission", "execution", "dependency"}
 
 
 @dataclass
@@ -17,6 +18,7 @@ class Outcome:
     summary: str
     result_ids: list[str] = field(default_factory=list)
     evidence_ids: list[str] = field(default_factory=list)
+    block_reason: Optional[str] = None
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -35,3 +37,9 @@ class Outcome:
             raise ValueError("outcome result_ids cannot contain empty ids")
         if not all(item.strip() for item in self.evidence_ids):
             raise ValueError("outcome evidence_ids cannot contain empty ids")
+        if self.block_reason is not None and self.block_reason not in BLOCK_REASONS:
+            raise ValueError(f"invalid outcome block_reason: {self.block_reason}")
+        if self.status == "blocked" and self.block_reason is None:
+            raise ValueError("blocked outcome requires block_reason")
+        if self.status != "blocked" and self.block_reason is not None:
+            raise ValueError("block_reason is only valid for blocked outcomes")
