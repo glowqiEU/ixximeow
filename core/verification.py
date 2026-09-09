@@ -14,25 +14,18 @@ def verify_execution_result(
     """Validate that a technical result belongs to one execution lineage."""
     if action.task_id != task.id:
         raise ValueError("action does not belong to task")
-
     if execution.task_id != task.id:
         raise ValueError("execution does not belong to task")
-
     if execution.action_id != action.id:
         raise ValueError("execution does not belong to action")
-
     if result.task_id != task.id:
         raise ValueError("result does not belong to task")
-
     if result.action_id != action.id:
         raise ValueError("result does not belong to action")
-
     if result.execution_id != execution.id:
         raise ValueError("result does not belong to execution")
-
     if not isinstance(result.success, bool):
         raise ValueError("result success must be a boolean")
-
     if not result.summary.strip():
         raise ValueError("result summary must not be empty")
 
@@ -45,7 +38,6 @@ def verify_evidence(
     """Validate that evidence is attached to the result that produced it."""
     if evidence.result_id != result.id:
         raise ValueError("evidence does not belong to result")
-
     if evidence.execution_id != execution.id:
         raise ValueError("evidence does not belong to execution")
 
@@ -60,16 +52,12 @@ def verify_outcome(
     """Validate that an objective outcome is supported by recorded artifacts."""
     if task.decision_id != decision.id:
         raise ValueError("task does not belong to decision")
-
     if outcome.decision_id != decision.id:
         raise ValueError("outcome does not belong to decision")
-
     if outcome.task_id != task.id:
         raise ValueError("outcome does not belong to task")
-
     if outcome.status == "achieved" and not outcome.evidence_ids:
         raise ValueError("achieved outcome requires evidence")
-
     if outcome.status != "blocked" and not outcome.result_ids and not outcome.evidence_ids:
         raise ValueError("outcome must reference recorded artifacts")
 
@@ -92,6 +80,8 @@ def verify_outcome(
             raise ValueError("evidence references unknown result")
         if result.task_id != task.id:
             raise ValueError("outcome references evidence from another task")
+        if item.execution_id != result.execution_id:
+            raise ValueError("outcome evidence execution does not match result")
         if item.result_id not in outcome.result_ids:
             raise ValueError("outcome evidence must reference a listed result")
         if outcome.status == "achieved" and not item.verified:
