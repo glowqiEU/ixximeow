@@ -79,6 +79,8 @@ class TestExecutionVerification(unittest.TestCase):
             result_id="result-1",
             execution_id="execution-1",
             kind="execution_output",
+            claim="post_id",
+            value="123",
             content="post id 123",
         )
 
@@ -89,6 +91,8 @@ class TestExecutionVerification(unittest.TestCase):
             result_id="result-2",
             execution_id="execution-1",
             kind="execution_output",
+            claim="post_id",
+            value="123",
             content="post id 123",
         )
 
