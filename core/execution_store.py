@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from .execution import Execution
 from .persistence import load_json, save_json
@@ -16,14 +17,14 @@ def load_executions() -> list[Execution]:
     return [Execution(**item) for item in data]
 
 
-def find_execution_by_id(execution_id: str) -> Execution | None:
+def find_execution_by_id(execution_id: str) -> Optional[Execution]:
     return next(
         (execution for execution in load_executions() if execution.id == execution_id),
         None,
     )
 
 
-def find_execution_by_idempotency_key(key: str) -> Execution | None:
+def find_execution_by_idempotency_key(key: str) -> Optional[Execution]:
     return next(
         (
             execution
