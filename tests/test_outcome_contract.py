@@ -84,13 +84,13 @@ class TestOutcomeContract(unittest.TestCase):
             outcome,
         )
 
-    def test_unknown_result_is_rejected(self):
+    def test_achieved_outcome_requires_evidence(self):
         outcome = Outcome(
             decision_id="decision-1",
             task_id="task-1",
             status="achieved",
             summary="done",
-            result_ids=["missing-result"],
+            result_ids=["result-1"],
         )
 
         with self.assertRaises(ValueError):
@@ -99,6 +99,52 @@ class TestOutcomeContract(unittest.TestCase):
                 self.task,
                 [self.result],
                 [],
+                outcome,
+            )
+
+    def test_achieved_outcome_requires_verified_evidence(self):
+        evidence = Evidence(
+            result_id="result-1",
+            execution_id="execution-1",
+            kind="external_observation",
+            content="post appears to be visible",
+            verified=False,
+            id="evidence-2",
+        )
+        outcome = Outcome(
+            decision_id="decision-1",
+            task_id="task-1",
+            status="achieved",
+            summary="done",
+            result_ids=["result-1"],
+            evidence_ids=["evidence-2"],
+        )
+
+        with self.assertRaises(ValueError):
+            verify_outcome(
+                self.decision,
+                self.task,
+                [self.result],
+                [evidence],
+                outcome,
+            )
+
+    def test_unknown_result_is_rejected(self):
+        outcome = Outcome(
+            decision_id="decision-1",
+            task_id="task-1",
+            status="achieved",
+            summary="done",
+            result_ids=["missing-result"],
+            evidence_ids=["evidence-1"],
+        )
+
+        with self.assertRaises(ValueError):
+            verify_outcome(
+                self.decision,
+                self.task,
+                [self.result],
+                [self.evidence],
                 outcome,
             )
 
@@ -123,6 +169,7 @@ class TestOutcomeContract(unittest.TestCase):
             task_id="task-1",
             status="achieved",
             summary="done",
+            result_ids=["result-2"],
             evidence_ids=["evidence-2"],
         )
 
