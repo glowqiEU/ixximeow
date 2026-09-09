@@ -14,9 +14,12 @@ class TestOutcomeStore(unittest.TestCase):
             outcome_store.OUTCOMES_FILE.unlink(missing_ok=True)
 
             outcome = Outcome(
+                decision_id="decision-123",
                 task_id="task-123",
-                success=True,
+                status="achieved",
                 summary="objective was achieved",
+                result_ids=["result-123"],
+                evidence_ids=["evidence-123"],
             )
 
             outcome_store.save_outcomes([outcome])
@@ -24,8 +27,9 @@ class TestOutcomeStore(unittest.TestCase):
 
             self.assertEqual(len(loaded), 1)
             self.assertEqual(loaded[0].id, outcome.id)
+            self.assertEqual(loaded[0].decision_id, "decision-123")
             self.assertEqual(loaded[0].task_id, "task-123")
-            self.assertTrue(loaded[0].success)
+            self.assertEqual(loaded[0].status, "achieved")
             self.assertEqual(loaded[0].summary, "objective was achieved")
         finally:
             outcome_store.OUTCOMES_FILE.unlink(missing_ok=True)
