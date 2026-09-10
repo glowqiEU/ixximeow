@@ -6,8 +6,12 @@ tasks.json
 decisions.json
 decision_evaluations.json
 outcomes.json
-
 approvals.json
-
-.venv/
 memory.json
+actions.json
+plans.json
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
