@@ -1,3 +1,5 @@
+import hashlib
+import json
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import uuid4
@@ -27,3 +29,15 @@ class Action:
             raise ValueError(
                 f"invalid action permission level: {self.permission_level}"
             ) from exc
+
+    def fingerprint(self) -> str:
+        """Return a stable identity for the exact action definition."""
+        payload = {
+            "id": self.id,
+            "input": self.input,
+            "name": self.name,
+            "permission_level": self.permission_level,
+            "task_id": self.task_id,
+        }
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
