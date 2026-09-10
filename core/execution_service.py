@@ -7,6 +7,7 @@ from .evidence_store import upsert_evidence
 from .execution import Execution
 from .execution_store import find_execution_by_id, upsert_execution
 from .models import Result
+from .reconciliation import Reconciliation
 from .result_store import upsert_result
 
 
@@ -117,10 +118,16 @@ def recover_uncertain_execution(
         raise ValueError("execution does not belong to task")
 
     reconciliation = reconciler(action)
-    if reconciliation in {"unknown", "not_executed"}:
+    if not isinstance(reconciliation, Reconciliation):
+        raise ValueError("reconciler must return a Reconciliation")
+
+    if reconciliation.status in {"unknown", "not_executed"}:
         return execution, None, []
-    if reconciliation != "already_succeeded":
-        raise ValueError(f"invalid reconciliation result: {reconciliation}")
+
+    if reconciliation.status != "already_succeeded":
+        raise ValueError(
+            f"invalid reconciliation status: {reconciliation.status}"
+        )
 
     execution.transition("succeeded")
     result = Result(
@@ -128,7 +135,7 @@ def recover_uncertain_execution(
         action_id=action.id,
         execution_id=execution.id,
         success=True,
-        summary="execution recovered: external state already succeeded",
+        summary=f"execution recovered: {reconciliation.summary}",
     )
     evidence = [
         Evidence(
@@ -137,7 +144,8 @@ def recover_uncertain_execution(
             kind="verification",
             claim="execution_reconciled",
             value=True,
-            content="external state confirmed the action had already succeeded",
+            content=reconciliation.summary,
+            source=reconciliation.source,
             verified=True,
         )
     ]
