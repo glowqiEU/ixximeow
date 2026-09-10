@@ -10,8 +10,7 @@ from core.orchestrator import Orchestrator
 
 
 class TestApprovalActionSnapshot(unittest.TestCase):
-    def test_approved_action_is_resumed_from_snapshot_not_current_decision(self):
-        orchestrator = Orchestrator(ActionRegistry())
+    def _base_fixture(self):
         task = Task(
             title="publish post",
             status="waiting_approval",
@@ -21,27 +20,34 @@ class TestApprovalActionSnapshot(unittest.TestCase):
             required_level="publish",
             id="task-1",
         )
-        approval = Approval(
-            action_id="action-1",
-            task_id="task-1",
-            required_level="publish",
-            reason="publishing requires approval",
-            id="approval-1",
-            status="approved",
-        )
-        original_action = Action(
+        action = Action(
             id="action-1",
             task_id="task-1",
             name="publish_post",
             input={"text": "approved payload"},
             permission_level="publish",
         )
-        mutated_decision = Decision(
+        approval = Approval(
+            action_id="action-1",
+            task_id="task-1",
+            required_level="publish",
+            reason="publishing requires approval",
+            action_fingerprint=action.fingerprint(),
+            id="approval-1",
+            status="approved",
+        )
+        decision = Decision(
             id="decision-1",
             objective="publish the post",
-            action="delete_post",
-            reason="mutated after approval",
+            action="publish_post",
+            reason="selected action",
         )
+        return task, action, approval, decision
+
+    def test_approved_action_is_resumed_from_snapshot_not_current_decision(self):
+        orchestrator = Orchestrator(ActionRegistry())
+        task, original_action, approval, mutated_decision = self._base_fixture()
+        mutated_decision.action = "delete_post"
 
         captured = {}
 
@@ -69,37 +75,42 @@ class TestApprovalActionSnapshot(unittest.TestCase):
         self.assertEqual(captured["action"].id, "action-1")
         self.assertIsNotNone(captured["execution"])
 
+    def test_resume_rejects_when_action_definition_changed_after_approval(self):
+        orchestrator = Orchestrator(ActionRegistry())
+        task, approved_action, approval, decision = self._base_fixture()
+        mutated_action = Action(
+            id=approved_action.id,
+            task_id=approved_action.task_id,
+            name=approved_action.name,
+            input={"text": "changed payload"},
+            permission_level=approved_action.permission_level,
+        )
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("core.orchestrator.load_approvals", return_value=[approval]))
+            stack.enter_context(patch("core.orchestrator.load_tasks", return_value=[task]))
+            stack.enter_context(patch("core.orchestrator.load_decisions", return_value=[decision]))
+            stack.enter_context(patch("core.orchestrator.find_action_by_id", return_value=mutated_action))
+            with self.assertRaisesRegex(ValueError, "definition changed after approval"):
+                orchestrator.resume_approval("approval-1")
+
+    def test_resume_rejects_legacy_approval_without_action_fingerprint(self):
+        orchestrator = Orchestrator(ActionRegistry())
+        task, action, approval, decision = self._base_fixture()
+        approval.action_fingerprint = ""
+
+        with ExitStack() as stack:
+            stack.enter_context(patch("core.orchestrator.load_approvals", return_value=[approval]))
+            stack.enter_context(patch("core.orchestrator.load_tasks", return_value=[task]))
+            stack.enter_context(patch("core.orchestrator.load_decisions", return_value=[decision]))
+            stack.enter_context(patch("core.orchestrator.find_action_by_id", return_value=action))
+            with self.assertRaisesRegex(ValueError, "no immutable approval fingerprint"):
+                orchestrator.resume_approval("approval-1")
+
     def test_resume_rejects_snapshot_permission_mismatch(self):
         orchestrator = Orchestrator(ActionRegistry())
-        task = Task(
-            title="publish post",
-            status="waiting_approval",
-            decision_id="decision-1",
-            action_id="action-1",
-            approval_id="approval-1",
-            required_level="publish",
-            id="task-1",
-        )
-        approval = Approval(
-            action_id="action-1",
-            task_id="task-1",
-            required_level="publish",
-            reason="publishing requires approval",
-            id="approval-1",
-            status="approved",
-        )
-        action = Action(
-            id="action-1",
-            task_id="task-1",
-            name="publish_post",
-            permission_level="execute",
-        )
-        decision = Decision(
-            id="decision-1",
-            objective="publish the post",
-            action="publish_post",
-            reason="selected action",
-        )
+        task, action, approval, decision = self._base_fixture()
+        action.permission_level = "execute"
 
         with ExitStack() as stack:
             stack.enter_context(patch("core.orchestrator.load_approvals", return_value=[approval]))
