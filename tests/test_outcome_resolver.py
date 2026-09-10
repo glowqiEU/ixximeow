@@ -72,9 +72,67 @@ class TestOutcomeResolver(unittest.TestCase):
         )
 
         self.assertEqual(outcome.status, "uncertain")
-        self.assertIn("post is visible", outcome.summary)
+        self.assertIn("post is visible: unknown", outcome.summary)
         self.assertEqual(outcome.result_ids, ["result-1"])
         self.assertEqual(outcome.evidence_ids, ["evidence-1"])
+
+    def test_explicit_true_evidence_produces_success(self):
+        result = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="platform accepted publication",
+            id="result-1",
+        )
+        evidence = Evidence(
+            result_id="result-1",
+            execution_id="execution-1",
+            kind="boolean",
+            content="true",
+            verified=True,
+            id="evidence-1",
+        )
+
+        outcome = resolve_outcome(
+            self.decision,
+            self.task,
+            self.objective,
+            [result],
+            [evidence],
+        )
+
+        self.assertEqual(outcome.status, "success")
+        self.assertIn("post is visible: True", outcome.summary)
+
+    def test_explicit_false_evidence_produces_failure(self):
+        result = Result(
+            task_id="task-1",
+            action_id="action-1",
+            execution_id="execution-1",
+            success=True,
+            summary="platform accepted publication",
+            id="result-1",
+        )
+        evidence = Evidence(
+            result_id="result-1",
+            execution_id="execution-1",
+            kind="boolean",
+            content="false",
+            verified=True,
+            id="evidence-1",
+        )
+
+        outcome = resolve_outcome(
+            self.decision,
+            self.task,
+            self.objective,
+            [result],
+            [evidence],
+        )
+
+        self.assertEqual(outcome.status, "failure")
+        self.assertIn("post is visible: False", outcome.summary)
 
     def test_result_from_another_task_is_rejected(self):
         result = Result(
