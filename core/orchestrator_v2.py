@@ -1,5 +1,6 @@
 from .action import Action
 from .action_registry import ActionRegistry
+from .action_store import upsert_action
 from .approval_gate import check_approval
 from .approval_store import load_approvals, save_approvals
 from .context_builder import build_context
@@ -107,6 +108,7 @@ class OrchestratorV2:
             name=decision.action,
             permission_level=task.required_level,
         )
+        upsert_action(action)
         task.action_id = action.id
         tasks[-1] = task
         save_tasks(tasks)
