@@ -7,7 +7,7 @@ ALLOWED_TRANSITIONS = {
     "running": {"completed", "failed", "blocked", "uncertain"},
     "blocked": {"running", "cancelled"},
     "uncertain": {"running", "completed", "failed", "cancelled"},
-    "failed": {"pending"},
+    "failed": set(),
     "completed": set(),
     "cancelled": set(),
 }
