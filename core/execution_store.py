@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from .execution import EXECUTION_STATUSES, Execution
+from .file_lock import exclusive_file_lock
 from .persistence import load_json, save_json
 
 
@@ -47,21 +48,32 @@ def find_executions_by_status(status: str) -> list[Execution]:
 
 
 def upsert_execution(execution: Execution) -> None:
-    executions = load_executions()
-    conflicting_execution = find_execution_by_idempotency_key(
-        execution.idempotency_key
-    )
-
-    if conflicting_execution is not None and conflicting_execution.id != execution.id:
-        raise ValueError(
-            "execution idempotency_key already belongs to another execution"
+    # The idempotency check and insert/update must be one critical section.
+    # Otherwise two workers can both observe the key as unused and both reserve it.
+    with exclusive_file_lock(EXECUTIONS_FILE):
+        executions = load_executions()
+        conflicting_execution = next(
+            (
+                existing
+                for existing in executions
+                if existing.idempotency_key == execution.idempotency_key
+            ),
+            None,
         )
 
-    for index, existing in enumerate(executions):
-        if existing.id == execution.id:
-            executions[index] = execution
-            save_executions(executions)
-            return
+        if (
+            conflicting_execution is not None
+            and conflicting_execution.id != execution.id
+        ):
+            raise ValueError(
+                "execution idempotency_key already belongs to another execution"
+            )
 
-    executions.append(execution)
-    save_executions(executions)
+        for index, existing in enumerate(executions):
+            if existing.id == execution.id:
+                executions[index] = execution
+                save_executions(executions)
+                return
+
+        executions.append(execution)
+        save_executions(executions)
