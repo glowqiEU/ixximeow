@@ -30,7 +30,8 @@ class TestExecutor(unittest.TestCase):
     def test_execute_task_returns_result(self):
         task = Task(title="test task", id="task-1")
 
-        task, result = execute_task(task)
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3):
+            task, result = execute_task(task)
 
         self.assertEqual(result.task_id, "task-1")
         self.assertTrue(result.success)
@@ -39,7 +40,8 @@ class TestExecutor(unittest.TestCase):
 
 class TestOrchestrator(unittest.TestCase):
     def test_run_produces_decision(self):
-        decision, task, result = Orchestrator().run()
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3):
+            decision, task, result = Orchestrator().run()
 
         self.assertIsNotNone(decision)
         self.assertIsNotNone(decision.id)
