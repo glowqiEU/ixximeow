@@ -82,7 +82,6 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
                 stack.enter_context(patch("core.orchestrator_v2.save_plans"))
                 stack.enter_context(patch("core.orchestrator_v2.load_tasks", return_value=[]))
                 stack.enter_context(patch("core.orchestrator_v2.check_approval", return_value=None))
-                stack.enter_context(patch("core.orchestrator_v2.upsert_evidence"))
                 stack.enter_context(patch("core.orchestrator_v2.upsert_outcome"))
                 stack.enter_context(patch("core.orchestrator_v2.append_event"))
                 stack.enter_context(patch("core.orchestrator_v2.apply_decision", return_value=state))
