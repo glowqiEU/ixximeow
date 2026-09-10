@@ -5,6 +5,7 @@ from .action import Action
 from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
+from .action_store import load_actions, save_actions
 from .result_store import load_results, save_results
 from .verification import verify_execution_result
 
@@ -31,6 +32,10 @@ def execute_task(
     task = transition_task(task, "running")
     action = Action(task_id=task.id, name=task.title)
     execution_id = str(uuid4())
+
+    actions = load_actions()
+    actions.append(action)
+    save_actions(actions)
 
     try:
         result = Result(
