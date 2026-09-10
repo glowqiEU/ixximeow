@@ -1,3 +1,4 @@
+from .criterion_evaluator import evaluate_criterion
 from .evidence import Evidence
 from .models import Decision, Result, Task
 from .objective import Objective
@@ -38,22 +39,31 @@ def resolve_outcome(
         if item.execution_id != result.execution_id:
             raise ValueError("evidence execution does not match result")
 
-    missing_criteria = [criterion.name for criterion in objective.criteria]
+    evaluations = [
+        (criterion, evaluate_criterion(criterion, evidence))
+        for criterion in objective.criteria
+    ]
 
-    # v1 deliberately does not guess semantic matches. Criteria evaluation
-    # becomes explicit in the next resolver layer; until then, evidence can
-    # establish provenance but not silently prove an objective.
     referenced_result_ids = [item.result_id for item in evidence]
     referenced_evidence_ids = [item.id for item in evidence]
+
+    if any(value is False for _, value in evaluations):
+        status = "failure"
+    elif all(value is True for _, value in evaluations):
+        status = "success"
+    else:
+        status = "uncertain"
+
+    details = "; ".join(
+        f"{criterion.name}: {value if value is not None else 'unknown'}"
+        for criterion, value in evaluations
+    )
 
     return Outcome(
         decision_id=decision.id,
         task_id=task.id,
-        status="uncertain",
-        summary=(
-            "objective criteria require explicit evaluation: "
-            + ", ".join(missing_criteria)
-        ),
+        status=status,
+        summary=f"objective evaluation: {details}",
         result_ids=referenced_result_ids,
         evidence_ids=referenced_evidence_ids,
     )
