@@ -14,6 +14,7 @@ from core.execution_service import (
     reserve_execution,
 )
 from core.execution_store import load_executions, upsert_execution
+from core.evidence import Evidence
 from core.evidence_store import find_evidence_by_result_id
 from core.reconciliation import Reconciliation
 from core.result_store import find_result_by_execution_id
@@ -209,6 +210,78 @@ class TestExecutionService(unittest.TestCase):
                 self.assertEqual(executions[0].status, "running")
                 self.assertEqual(executions[0].attempt, 1)
                 self.assertIsNone(executions[0].finished_at)
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_result_persistence_failure_does_not_commit_terminal_execution(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register("publish_post", lambda action: {"summary": "published"})
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                with patch(
+                    "core.execution_service.upsert_result",
+                    side_effect=RuntimeError("result persistence failure"),
+                ):
+                    with self.assertRaises(RuntimeError):
+                        execute_action(action, registry)
+
+                self.assertEqual(load_executions()[0].status, "running")
+                self.assertIsNone(find_result_by_execution_id(load_executions()[0].id))
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_evidence_persistence_failure_does_not_commit_terminal_execution(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register("publish_post", lambda action: {"summary": "published"})
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                with patch(
+                    "core.execution_service.upsert_evidence",
+                    side_effect=RuntimeError("evidence persistence failure"),
+                ):
+                    with self.assertRaises(RuntimeError):
+                        execute_action(action, registry)
+
+                execution = load_executions()[0]
+                self.assertEqual(execution.status, "running")
+                result = find_result_by_execution_id(execution.id)
+                self.assertIsNotNone(result)
+                self.assertEqual(find_evidence_by_result_id(result.id), [])
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_invalid_technical_artifact_is_rejected_before_persistence(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register("publish_post", lambda action: {"summary": "published"})
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                foreign_evidence = Evidence(
+                    result_id="foreign-result",
+                    execution_id="foreign-execution",
+                    kind="execution_output",
+                    claim="foreign_claim",
+                    content="foreign evidence",
+                )
+                with patch(
+                    "core.execution_service._build_evidence",
+                    return_value=[foreign_evidence],
+                ):
+                    with self.assertRaises(ValueError):
+                        execute_action(action, registry)
+
+                execution = load_executions()[0]
+                self.assertEqual(execution.status, "running")
+                self.assertIsNone(find_result_by_execution_id(execution.id))
+                self.assertEqual(find_evidence_by_result_id("foreign-result"), [])
             finally:
                 self._restore_stores(stores, original)
 
