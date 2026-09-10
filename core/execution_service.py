@@ -5,7 +5,7 @@ from .action_registry import ActionRegistry
 from .evidence import Evidence
 from .evidence_store import find_evidence_by_result_id, upsert_evidence
 from .execution import Execution
-from .execution_store import find_execution_by_id, upsert_execution
+from .execution_store import find_execution_by_id, find_execution_by_idempotency_key, upsert_execution
 from .models import Result
 from .reconciliation import Reconciliation
 from .result_store import find_result_by_execution_id, upsert_result
@@ -51,16 +51,40 @@ def _build_evidence(
     return items
 
 
-def execute_action(
-    action: Action,
-    registry: ActionRegistry,
-) -> tuple[Execution, Result, list[Evidence]]:
-    """Execute one explicit action and persist its technical artifacts."""
+def reserve_execution(action: Action) -> Execution:
+    """Durably reserve one execution attempt without invoking the action."""
+    existing = find_execution_by_idempotency_key(action.id)
+    if existing is not None:
+        if existing.action_id != action.id or existing.task_id != action.task_id:
+            raise ValueError("existing execution does not match action")
+        if existing.status != "pending":
+            raise ValueError(
+                f"execution already exists with status: {existing.status}"
+            )
+        return existing
+
     execution = Execution(
         action_id=action.id,
         task_id=action.task_id,
         idempotency_key=action.id,
     )
+    upsert_execution(execution)
+    return execution
+
+
+def execute_reserved_action(
+    action: Action,
+    execution: Execution,
+    registry: ActionRegistry,
+) -> tuple[Execution, Result, list[Evidence]]:
+    """Start a pending execution and produce its technical artifacts."""
+    if execution.action_id != action.id:
+        raise ValueError("execution does not belong to action")
+    if execution.task_id != action.task_id:
+        raise ValueError("execution does not belong to task")
+    if execution.status != "pending":
+        raise ValueError(f"execution is not pending: {execution.status}")
+
     execution.transition("running")
     upsert_execution(execution)
 
@@ -97,6 +121,15 @@ def execute_action(
     for item in evidence:
         upsert_evidence(item)
     return execution, result, evidence
+
+
+def execute_action(
+    action: Action,
+    registry: ActionRegistry,
+) -> tuple[Execution, Result, list[Evidence]]:
+    """Reserve and execute one explicit action."""
+    execution = reserve_execution(action)
+    return execute_reserved_action(action, execution, registry)
 
 
 def recover_uncertain_execution(
@@ -163,9 +196,6 @@ def recover_uncertain_execution(
             if item.execution_id != execution.id or item.result_id != result.id:
                 raise ValueError("existing recovery evidence does not match artifacts")
 
-    # Persist dependent artifacts while the durable execution is still uncertain.
-    # If the final execution write fails, a later recovery can reuse these artifacts
-    # instead of producing duplicate results/evidence.
     upsert_result(result)
     for item in evidence:
         upsert_evidence(item)
