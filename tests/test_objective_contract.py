@@ -1,6 +1,5 @@
 import unittest
 
-from core.models import Decision, Task
 from core.objective import Objective, ObjectiveCriterion
 
 
@@ -11,56 +10,47 @@ class TestObjectiveContract(unittest.TestCase):
                 decision_id="decision-1",
                 task_id="task-1",
                 description="publish post",
+                criteria=[],
             )
 
-    def test_objective_criterion_is_explicit(self):
+    def test_criterion_has_explicit_claim_and_expected_value(self):
         criterion = ObjectiveCriterion(
-            name="post is visible",
+            claim="post_visible",
             kind="boolean",
             expected=True,
         )
+
+        self.assertEqual(criterion.claim, "post_visible")
+        self.assertEqual(criterion.kind, "boolean")
+        self.assertIs(criterion.expected, True)
+        self.assertEqual(criterion.name, "post_visible")
+
+    def test_invalid_criterion_kind_is_rejected(self):
+        with self.assertRaises(ValueError):
+            ObjectiveCriterion(
+                claim="post_visible",
+                kind="guess",
+                expected=True,
+            )
+
+    def test_boolean_criterion_requires_boolean_expected_value(self):
+        with self.assertRaises(ValueError):
+            ObjectiveCriterion(
+                claim="post_visible",
+                kind="boolean",
+                expected="true",
+            )
+
+    def test_objective_lineage_is_explicit(self):
         objective = Objective(
             decision_id="decision-1",
             task_id="task-1",
             description="publish post",
-            criteria=[criterion],
+            criteria=[ObjectiveCriterion("post_visible", "boolean", True)],
         )
 
-        self.assertEqual(objective.criteria[0].name, "post is visible")
-        self.assertEqual(objective.criteria[0].kind, "boolean")
-        self.assertTrue(objective.criteria[0].expected)
-
-    def test_invalid_criterion_kind_is_rejected(self):
-        with self.assertRaises(ValueError):
-            ObjectiveCriterion(name="post exists", kind="vibes")
-
-    def test_objective_lineage_is_explicit(self):
-        decision = Decision(
-            objective="publish post",
-            action="publish_post",
-            reason="scheduled",
-            id="decision-1",
-        )
-        task = Task(
-            title="publish post",
-            decision_id=decision.id,
-            id="task-1",
-        )
-        objective = Objective(
-            decision_id=decision.id,
-            task_id=task.id,
-            description="publish post",
-            criteria=[
-                ObjectiveCriterion(
-                    name="post is visible",
-                    kind="boolean",
-                    expected=True,
-                )
-            ],
-        )
-
-        self.assertEqual(objective.decision_id, decision.id)
-        self.assertEqual(objective.task_id, task.id)
+        self.assertEqual(objective.decision_id, "decision-1")
+        self.assertEqual(objective.task_id, "task-1")
 
 
 if __name__ == "__main__":

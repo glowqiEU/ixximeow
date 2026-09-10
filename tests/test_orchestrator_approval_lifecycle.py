@@ -1,85 +1,113 @@
 import unittest
 from unittest.mock import patch
 
+from core.action import Action
+from core.action_registry import ActionRegistry
 from core.approval import Approval
+from core.execution import Execution
 from core.models import Decision, Result, Task
 from core.orchestrator import Orchestrator
 from core.state import SystemState
 
 
 class TestOrchestratorApprovalLifecycle(unittest.TestCase):
-    def test_approval_resume_executes_approved_task(self):
+    def _registry(self):
+        return ActionRegistry()
+
+    def test_approved_task_resumes_through_finalize(self):
         decision = Decision("goal-1", "publish", "requires approval", goal_id="goal-1")
         task = Task(
             "publish",
+            status="waiting_approval",
+            required_level="publish",
             decision_id=decision.id,
             goal_id=decision.goal_id,
+            action_id="action-1",
+            approval_id="approval-1",
             id="task-1",
         )
         approval = Approval(
+            action_id=task.action_id,
             task_id=task.id,
             required_level="publish",
             reason="approval required",
+            status="approved",
             id="approval-1",
         )
-
-        with patch("core.orchestrator.build_context"), \
-             patch("core.orchestrator.generate_candidates", return_value=[decision]), \
-             patch("core.orchestrator.evaluate_decision"), \
-             patch("core.orchestrator.select_decision", return_value=decision), \
-             patch("core.orchestrator.save_decision_evaluations"), \
-             patch("core.orchestrator.load_decisions", return_value=[]), \
-             patch("core.orchestrator.save_decisions"), \
-             patch("core.orchestrator.load_tasks", return_value=[]), \
-             patch("core.orchestrator.save_tasks"), \
-             patch("core.orchestrator.ensure_task_id", return_value=task), \
-             patch("core.orchestrator.load_state", return_value=SystemState()), \
-             patch("core.orchestrator.save_state"), \
-             patch("core.orchestrator.check_approval", return_value=approval), \
-             patch("core.orchestrator.load_approvals", return_value=[]), \
-             patch("core.orchestrator.save_approvals"), \
-             patch("core.orchestrator.append_event"), \
-             patch("core.orchestrator.execute_task") as execute_task:
-            first = Orchestrator().run()
-            execute_task.assert_not_called()
-
-        self.assertEqual(first[1].status, "waiting_approval")
-        self.assertIsNone(first[2])
-        self.assertEqual(first[1].approval_id, approval.id)
-
-        approval.status = "approved"
-        approved_result = Result(task.id, True, "executed")
+        action = Action(
+            id=task.action_id,
+            task_id=task.id,
+            name="publish",
+            permission_level="publish",
+        )
+        execution = Execution(
+            action_id=action.id,
+            task_id=task.id,
+            status="pending",
+            id="execution-1",
+        )
+        completed_task = Task(
+            "publish",
+            status="completed",
+            decision_id=decision.id,
+            goal_id=decision.goal_id,
+            action_id=task.action_id,
+            approval_id=approval.id,
+            id=task.id,
+        )
+        running_task = Task(
+            "publish",
+            status="running",
+            decision_id=decision.id,
+            goal_id=decision.goal_id,
+            action_id=task.action_id,
+            approval_id=approval.id,
+            required_level=task.required_level,
+            id=task.id,
+        )
+        result = Result(
+            task_id=task.id,
+            action_id=task.action_id,
+            execution_id=execution.id,
+            success=True,
+            summary="executed",
+        )
 
         with patch("core.orchestrator.load_approvals", return_value=[approval]), \
-             patch("core.orchestrator.load_tasks", return_value=[first[1]]), \
+             patch("core.orchestrator.load_tasks", return_value=[task]), \
+             patch("core.orchestrator.load_decisions", return_value=[decision]), \
+             patch("core.orchestrator.find_action_by_id", return_value=action), \
+             patch("core.orchestrator.reserve_execution", return_value=execution) as reserve, \
+             patch("core.orchestrator.claim_task_running", return_value=running_task) as claim, \
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.save_approvals"), \
-             patch("core.orchestrator.execute_task", return_value=(
-                 Task(
-                     "publish",
-                     status="completed",
-                     decision_id=decision.id,
-                     goal_id=decision.goal_id,
-                     approval_id=approval.id,
-                     id=task.id,
-                 ),
-                 approved_result,
-             )) as resume_execute, \
-             patch("core.orchestrator.load_state", return_value=SystemState(
-                 active_task=task.id,
-                 active_goal_id=decision.goal_id,
-             )), \
-             patch("core.orchestrator.save_state"), \
-             patch("core.orchestrator.append_event"):
-            resumed_task, result = Orchestrator().resume_approval(approval.id)
+             patch("core.orchestrator.load_state", return_value=SystemState()), \
+             patch.object(
+                 Orchestrator,
+                 "_finalize",
+                 return_value=(completed_task, result),
+             ) as finalize:
+            resumed_task, resumed_result = Orchestrator(self._registry()).resume_approval(
+                approval.id
+            )
 
         self.assertEqual(resumed_task.status, "completed")
-        self.assertEqual(result.task_id, resumed_task.id)
-        self.assertTrue(result.success)
-        resume_execute.assert_called_once_with(first[1], approval=approval)
+        self.assertEqual(resumed_result.task_id, task.id)
+        reserve.assert_called_once_with(action)
+        claim.assert_called_once_with(task.id, approval.id)
+        finalize.assert_called_once()
+        action_arg = finalize.call_args.args[2]
+        execution_arg = finalize.call_args.args[3]
+        self.assertEqual(action_arg.id, task.action_id)
+        self.assertEqual(action_arg.task_id, task.id)
+        self.assertEqual(action_arg.name, action.name)
+        self.assertEqual(action_arg.permission_level, action.permission_level)
+        self.assertEqual(execution_arg.id, execution.id)
+        self.assertEqual(execution_arg.status, "pending")
 
-    def test_rejected_approval_cancels_task_without_execution(self):
+    def test_rejected_approval_cancels_without_execution(self):
         approval = Approval(
+            action_id="action-1",
             task_id="task-1",
             required_level="publish",
             reason="approval required",
@@ -89,12 +117,8 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         task = Task(
             "publish",
             status="waiting_approval",
-            approval_id=approval.id,
-            id=approval.task_id,
-        )
-        cancelled_task = Task(
-            "publish",
-            status="cancelled",
+            required_level="publish",
+            action_id=approval.action_id,
             approval_id=approval.id,
             id=approval.task_id,
         )
@@ -103,15 +127,67 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
              patch("core.orchestrator.load_tasks", return_value=[task]), \
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.save_approvals"), \
-             patch("core.orchestrator.execute_task", return_value=(cancelled_task, None)) as execute_task, \
              patch("core.orchestrator.load_state", return_value=SystemState(active_task=task.id)), \
              patch("core.orchestrator.save_state"), \
-             patch("core.orchestrator.append_event"):
-            resumed_task, result = Orchestrator().resume_approval(approval.id)
+             patch("core.orchestrator.append_event"), \
+             patch.object(Orchestrator, "_finalize") as finalize:
+            resumed_task, result = Orchestrator(self._registry()).resume_approval(
+                approval.id
+            )
 
         self.assertEqual(resumed_task.status, "cancelled")
         self.assertIsNone(result)
-        execute_task.assert_called_once_with(task, approval=approval)
+        finalize.assert_not_called()
+
+    def test_resume_rejects_approval_bound_to_different_action(self):
+        approval = Approval(
+            action_id="action-2",
+            task_id="task-1",
+            required_level="publish",
+            reason="approval required",
+            status="approved",
+            id="approval-1",
+        )
+        task = Task(
+            "publish",
+            status="waiting_approval",
+            action_id="action-1",
+            approval_id=approval.id,
+            id=approval.task_id,
+        )
+
+        with patch("core.orchestrator.load_approvals", return_value=[approval]), \
+             patch("core.orchestrator.load_tasks", return_value=[task]):
+            with self.assertRaisesRegex(ValueError, "approval does not belong to action"):
+                Orchestrator(self._registry()).resume_approval(approval.id)
+
+    def test_resume_rejects_approval_with_mismatched_permission_level(self):
+        approval = Approval(
+            action_id="action-1",
+            task_id="task-1",
+            required_level="publish",
+            reason="approval required",
+            status="approved",
+            id="approval-1",
+        )
+        task = Task(
+            "publish",
+            status="waiting_approval",
+            required_level="execute",
+            action_id=approval.action_id,
+            approval_id=approval.id,
+            id=approval.task_id,
+        )
+
+        with patch("core.orchestrator.load_approvals", return_value=[approval]), \
+             patch("core.orchestrator.load_tasks", return_value=[task]), \
+             patch.object(Orchestrator, "_finalize") as finalize:
+            with self.assertRaisesRegex(
+                ValueError, "approval permission level does not match task"
+            ):
+                Orchestrator(self._registry()).resume_approval(approval.id)
+
+        finalize.assert_not_called()
 
 
 if __name__ == "__main__":

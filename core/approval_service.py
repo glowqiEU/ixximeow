@@ -1,20 +1,24 @@
 from typing import Optional
 
+from .action import Action
 from .approval import Approval
 from .permissions import AutonomyLevel, requires_approval
 
 
 def create_approval_if_needed(
-    task_id: str,
+    action: Action,
     current_level: AutonomyLevel,
-    required_level: AutonomyLevel,
     reason: str,
 ) -> Optional[Approval]:
+    required_level = AutonomyLevel[action.permission_level.upper()]
+
     if not requires_approval(current_level, required_level):
         return None
 
     return Approval(
-        task_id=task_id,
+        action_id=action.id,
+        task_id=action.task_id,
         required_level=required_level.name.lower(),
         reason=reason,
+        action_fingerprint=action.fingerprint(),
     )

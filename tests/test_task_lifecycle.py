@@ -61,12 +61,36 @@ class TestTaskLifecycle(unittest.TestCase):
 
         self.assertEqual(task.status, "running")
 
-    def test_failed_to_pending_for_retry(self):
+    def test_blocked_to_cancelled(self):
+        task = Task(title="test", status="blocked")
+
+        transition_task(task, "cancelled")
+
+        self.assertEqual(task.status, "cancelled")
+
+    def test_blocked_cannot_complete(self):
+        task = Task(title="test", status="blocked")
+
+        with self.assertRaises(ValueError):
+            transition_task(task, "completed")
+
+    def test_blocked_cannot_fail(self):
+        task = Task(title="test", status="blocked")
+
+        with self.assertRaises(ValueError):
+            transition_task(task, "failed")
+
+    def test_blocked_cannot_be_uncertain(self):
+        task = Task(title="test", status="blocked")
+
+        with self.assertRaises(ValueError):
+            transition_task(task, "uncertain")
+
+    def test_failed_is_terminal_until_retry_contract_exists(self):
         task = Task(title="test", status="failed")
 
-        transition_task(task, "pending")
-
-        self.assertEqual(task.status, "pending")
+        with self.assertRaises(ValueError):
+            transition_task(task, "pending")
 
     def test_pending_to_cancelled(self):
         task = Task(title="test")

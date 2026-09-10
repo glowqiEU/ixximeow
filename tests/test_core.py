@@ -3,12 +3,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from core.models import Decision, Task
+from core.models import Decision
 from core.decision_engine import choose_decision
-from core.executor import execute_task
 from core.goal_store import get_goal, load_goals, save_goals
 from core.goals import Goal
-from core.orchestrator import Orchestrator
 
 
 class TestDecisionEngine(unittest.TestCase):
@@ -24,26 +22,6 @@ class TestDecisionEngine(unittest.TestCase):
         self.assertEqual(decision.action, "high")
         self.assertEqual(decision.priority, 10)
         self.assertIsNotNone(decision.id)
-
-
-class TestExecutor(unittest.TestCase):
-    def test_execute_task_returns_result(self):
-        task = Task(title="test task", id="task-1")
-
-        task, result = execute_task(task)
-
-        self.assertEqual(result.task_id, "task-1")
-        self.assertTrue(result.success)
-        self.assertEqual(result.summary, "task execution completed")
-
-
-class TestOrchestrator(unittest.TestCase):
-    def test_run_produces_decision(self):
-        decision, task, result = Orchestrator().run()
-
-        self.assertIsNotNone(decision)
-        self.assertIsNotNone(decision.id)
-        self.assertEqual(decision.status, "proposed")
 
 
 class TestGoalStore(unittest.TestCase):

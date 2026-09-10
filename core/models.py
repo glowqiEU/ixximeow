@@ -16,6 +16,7 @@ class Decision:
     priority: int = 0
     status: str = "proposed"
     goal_id: Optional[str] = None
+    criteria: List[dict] = field(default_factory=list)
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -41,6 +42,7 @@ class Task:
     decision_id: Optional[str] = None
     plan_id: Optional[str] = None
     goal_id: Optional[str] = None
+    action_id: Optional[str] = None
     approval_id: Optional[str] = None
     required_level: str = "execute"
     id: str = field(default_factory=new_id)
@@ -51,10 +53,26 @@ class Task:
 
 @dataclass
 class Result:
+    """Technical result produced by exactly one execution."""
+
     task_id: str
+    action_id: str
+    execution_id: str
     success: bool
     summary: str
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+    def __post_init__(self) -> None:
+        if not self.task_id.strip():
+            raise ValueError("result task_id cannot be empty")
+        if not self.action_id.strip():
+            raise ValueError("result action_id cannot be empty")
+        if not self.execution_id.strip():
+            raise ValueError("result execution_id cannot be empty")
+        if not isinstance(self.success, bool):
+            raise ValueError("result success must be a boolean")
+        if not self.summary.strip():
+            raise ValueError("result summary must not be empty")
