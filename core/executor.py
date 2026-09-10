@@ -9,7 +9,9 @@ from .action_registry import (
 )
 from .action_response import ActionResponse
 from .approval import Approval
+from .agent_config import CURRENT_AUTONOMY_LEVEL
 from .models import Task, Result
+from .permissions import AutonomyLevel, can_execute
 from .task_lifecycle import transition_task
 from .action_store import load_actions, save_actions
 from .result_store import load_results, save_results
@@ -34,6 +36,23 @@ def _default_registry() -> ActionRegistry:
     return registry
 
 
+def _ensure_execution_permission(task: Task, approval: Optional[Approval]) -> None:
+    required_level = AutonomyLevel[task.required_level.upper()]
+
+    if can_execute(CURRENT_AUTONOMY_LEVEL, required_level):
+        return
+
+    if approval is None:
+        raise PermissionError(
+            f"task requires {task.required_level} autonomy level"
+        )
+
+    if approval.status != "approved":
+        raise PermissionError(
+            f"task requires approved {task.required_level} autonomy level"
+        )
+
+
 def execute_task(
     task: Task,
     approval: Optional[Approval] = None,
@@ -53,6 +72,8 @@ def execute_task(
 
         if approval.status != "approved":
             raise ValueError(f"invalid approval status: {approval.status}")
+
+    _ensure_execution_permission(task, approval)
 
     task = transition_task(task, "running")
     action = Action(
