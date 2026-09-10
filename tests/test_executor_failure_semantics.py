@@ -10,7 +10,8 @@ from core.models import Task
 class TestExecutorFailureSemantics(unittest.TestCase):
     def _execute(self, registry):
         task = Task(title="create post", id="task-1")
-        with patch("core.executor.load_actions", return_value=[]), \
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
+             patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results"), \
@@ -79,7 +80,8 @@ class TestExecutorFailureSemantics(unittest.TestCase):
         )
         task = Task(title="create post", id="task-1")
 
-        with patch("core.executor.load_actions", return_value=[]), \
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
+             patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results") as save_results, \
