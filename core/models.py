@@ -56,11 +56,11 @@ class Result:
     summary: str
     action_id: Optional[str] = None
     execution_id: Optional[str] = None
-    failure_kind: Optional[str] = None
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+    failure_kind: Optional[str] = None
 
     def __post_init__(self) -> None:
         if not self.task_id.strip():
