@@ -8,6 +8,7 @@ from core.action_registry import ActionRegistry
 from core.execution import Execution
 from core.execution_service import execute_action, recover_uncertain_execution
 from core.execution_store import load_executions, upsert_execution
+from core.reconciliation import Reconciliation
 
 
 class TestExecutionService(unittest.TestCase):
@@ -133,7 +134,16 @@ class TestExecutionService(unittest.TestCase):
             finally:
                 self._restore_stores(stores, original)
 
-    def test_recover_uncertain_execution_never_reruns_handler(self):
+    def _uncertain_execution(self, action):
+        return Execution(
+            action_id=action.id,
+            task_id=action.task_id,
+            status="uncertain",
+            attempt=1,
+            id="execution-1",
+        )
+
+    def test_recover_already_succeeded_never_reruns_handler(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             registry = ActionRegistry()
@@ -147,19 +157,17 @@ class TestExecutionService(unittest.TestCase):
             action = Action(task_id="task-1", name="publish_post", id="action-1")
             stores, original = self._patch_stores(root)
             try:
-                execution = Execution(
-                    action_id=action.id,
-                    task_id=action.task_id,
-                    status="uncertain",
-                    attempt=1,
-                    id="execution-1",
-                )
+                execution = self._uncertain_execution(action)
                 upsert_execution(execution)
 
                 recovered, result, evidence = recover_uncertain_execution(
                     execution.id,
                     action,
-                    lambda current_action: "already_succeeded",
+                    lambda current_action: Reconciliation(
+                        status="already_succeeded",
+                        summary="remote post already exists",
+                        source="platform-api",
+                    ),
                 )
 
                 self.assertEqual(recovered.id, execution.id)
@@ -168,6 +176,7 @@ class TestExecutionService(unittest.TestCase):
                 self.assertIsNotNone(result)
                 self.assertTrue(result.success)
                 self.assertEqual(len(evidence), 1)
+                self.assertEqual(evidence[0].source, "platform-api")
                 self.assertEqual(calls, [])
             finally:
                 self._restore_stores(stores, original)
@@ -178,25 +187,67 @@ class TestExecutionService(unittest.TestCase):
             action = Action(task_id="task-1", name="publish_post", id="action-1")
             stores, original = self._patch_stores(root)
             try:
-                execution = Execution(
-                    action_id=action.id,
-                    task_id=action.task_id,
-                    status="uncertain",
-                    attempt=1,
-                    id="execution-1",
-                )
+                execution = self._uncertain_execution(action)
                 upsert_execution(execution)
 
                 recovered, result, evidence = recover_uncertain_execution(
                     execution.id,
                     action,
-                    lambda current_action: "unknown",
+                    lambda current_action: Reconciliation(
+                        status="unknown",
+                        summary="remote state could not be determined",
+                        source="platform-api",
+                    ),
                 )
 
                 self.assertEqual(recovered.id, execution.id)
                 self.assertEqual(recovered.status, "uncertain")
                 self.assertIsNone(result)
                 self.assertEqual(evidence, [])
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_recover_not_executed_keeps_execution_uncertain_until_retry_contract_exists(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = self._uncertain_execution(action)
+                upsert_execution(execution)
+
+                recovered, result, evidence = recover_uncertain_execution(
+                    execution.id,
+                    action,
+                    lambda current_action: Reconciliation(
+                        status="not_executed",
+                        summary="platform reports no matching side effect",
+                        source="platform-api",
+                    ),
+                )
+
+                self.assertEqual(recovered.id, execution.id)
+                self.assertEqual(recovered.status, "uncertain")
+                self.assertIsNone(result)
+                self.assertEqual(evidence, [])
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_recover_rejects_unstructured_reconciliation(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = self._uncertain_execution(action)
+                upsert_execution(execution)
+
+                with self.assertRaises(ValueError):
+                    recover_uncertain_execution(
+                        execution.id,
+                        action,
+                        lambda current_action: "already_succeeded",
+                    )
             finally:
                 self._restore_stores(stores, original)
 
