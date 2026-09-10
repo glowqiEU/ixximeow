@@ -7,6 +7,14 @@ from .action_response import ActionResponse
 ActionHandler = Callable[[Action], ActionResponse]
 
 
+class ActionDispatchError(ValueError):
+    """Raised when an action cannot be dispatched to a registered handler."""
+
+
+class ActionContractError(TypeError):
+    """Raised when an action handler violates the response contract."""
+
+
 class ActionRegistry:
     """Registry mapping explicit action names to deterministic handlers."""
 
@@ -24,10 +32,10 @@ class ActionRegistry:
         try:
             return self._handlers[name]
         except KeyError as exc:
-            raise ValueError(f"action not registered: {name}") from exc
+            raise ActionDispatchError(f"action not registered: {name}") from exc
 
     def execute(self, action: Action) -> ActionResponse:
         response = self.get(action.name)(action)
         if not isinstance(response, ActionResponse):
-            raise TypeError("action handler must return ActionResponse")
+            raise ActionContractError("action handler must return ActionResponse")
         return response
