@@ -38,6 +38,7 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             with patch("core.execution_store.EXECUTIONS_FILE", root / "executions.json"), \
+                 patch("core.task_store.TASKS_FILE", root / "tasks.json"), \
                  patch("core.orchestrator_v2.build_context", return_value=context), \
                  patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
                  patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
