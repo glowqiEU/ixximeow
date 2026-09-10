@@ -17,12 +17,13 @@ ALLOWED_TRANSITIONS = {
 
 @dataclass
 class Approval:
-    """A human authorization bound to one concrete action."""
+    """A human authorization bound to one exact action definition."""
 
     action_id: str
     task_id: str
     required_level: str
     reason: str
+    action_fingerprint: str = ""
     status: str = "pending"
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: str = field(
@@ -45,6 +46,9 @@ class Approval:
             raise ValueError(
                 f"invalid approval required level: {self.required_level}"
             ) from exc
+
+        if self.action_fingerprint and len(self.action_fingerprint) != 64:
+            raise ValueError("approval action_fingerprint must be a sha256 hex digest")
 
     def transition(self, new_status: str) -> "Approval":
         if new_status not in APPROVAL_STATUSES:
