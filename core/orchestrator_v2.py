@@ -20,7 +20,7 @@ from .outcome_store import upsert_outcome
 from .plan_builder import build_plan
 from .plan_store import load_plans, save_plans
 from .planner import generate_candidates
-from .state_manager import apply_decision, apply_result
+from .state_manager import apply_decision, apply_result, apply_uncertain_execution
 from .state_store import load_state, save_state
 from .task_lifecycle import transition_task
 from .task_store import ensure_task_id, load_tasks, save_tasks
@@ -37,6 +37,26 @@ class OrchestratorV2:
         execution, result, evidence = execute_reserved_action(
             action, execution, self.registry
         )
+
+        if result is None:
+            if execution.status != "uncertain":
+                raise ValueError("missing result requires uncertain execution")
+            task = transition_task(task, "uncertain")
+            task_index = next(index for index, item in enumerate(tasks) if item.id == task.id)
+            tasks[task_index] = task
+            save_tasks(tasks)
+            state = apply_uncertain_execution(state=state, task=task)
+            save_state(state)
+            append_event(
+                HistoryEvent(
+                    event_type="execution_uncertain",
+                    summary="execution requires reconciliation before a technical result exists",
+                    decision_id=decision.id,
+                    task_id=task.id,
+                )
+            )
+            return task, None
+
         verify_execution_result(task, action, execution, result)
         for item in evidence:
             verify_evidence(result, execution, item)
