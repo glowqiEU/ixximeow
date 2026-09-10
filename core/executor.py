@@ -10,7 +10,7 @@ from .action_registry import (
 from .action_response import ActionResponse
 from .approval import Approval
 from .approval_store import load_approvals
-from .agent_config import CURRENT_AUTONOMY_LEVEL
+from . import agent_config
 from .models import Task, Result
 from .permissions import AutonomyLevel, can_execute
 from .task_lifecycle import transition_task
@@ -40,7 +40,7 @@ def _default_registry() -> ActionRegistry:
 def _ensure_execution_permission(task: Task, approval: Optional[Approval]) -> None:
     required_level = AutonomyLevel[task.required_level.upper()]
 
-    if can_execute(CURRENT_AUTONOMY_LEVEL, required_level):
+    if can_execute(agent_config.CURRENT_AUTONOMY_LEVEL, required_level):
         return
 
     if approval is None:
