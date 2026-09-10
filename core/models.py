@@ -68,5 +68,3 @@ class Result:
             raise ValueError("result action_id cannot be empty")
         if self.execution_id is not None and not self.execution_id.strip():
             raise ValueError("result execution_id cannot be empty")
-        if not self.summary.strip():
-            raise ValueError("result summary cannot be empty")
