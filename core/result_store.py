@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+from .file_lock import exclusive_file_lock
 from .models import Result
 from .persistence import load_json, save_json
 
@@ -32,19 +33,24 @@ def find_result_by_execution_id(execution_id: str) -> Optional[Result]:
 
 
 def upsert_result(result: Result) -> None:
-    results = load_results()
+    """Atomically enforce one result per execution while persisting the result."""
+    with exclusive_file_lock(RESULTS_FILE):
+        results = load_results()
 
-    for index, existing in enumerate(results):
-        if existing.id == result.id:
-            results[index] = result
-            save_results(results)
-            return
+        for index, existing in enumerate(results):
+            if existing.id == result.id:
+                results[index] = result
+                save_results(results)
+                return
 
-    conflicting_result = find_result_by_execution_id(result.execution_id)
-    if conflicting_result is not None:
-        raise ValueError(
-            "result execution_id already belongs to another result"
+        conflicting_result = next(
+            (existing for existing in results if existing.execution_id == result.execution_id),
+            None,
         )
+        if conflicting_result is not None:
+            raise ValueError(
+                "result execution_id already belongs to another result"
+            )
 
-    results.append(result)
-    save_results(results)
+        results.append(result)
+        save_results(results)
