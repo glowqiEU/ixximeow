@@ -2,7 +2,11 @@ from typing import Optional
 from uuid import uuid4
 
 from .action import Action
-from .action_registry import ActionRegistry
+from .action_registry import (
+    ActionContractError,
+    ActionDispatchError,
+    ActionRegistry,
+)
 from .action_response import ActionResponse
 from .approval import Approval
 from .models import Task, Result
@@ -62,20 +66,26 @@ def execute_task(
     actions.append(action)
     save_actions(actions)
 
+    active_registry = registry or _default_registry()
     try:
-        active_registry = registry or _default_registry()
         response = active_registry.execute(action)
+    except ActionDispatchError as exc:
         result = Result(
             task_id=task.id,
             action_id=action.id,
             execution_id=execution_id,
-            success=response.success,
-            summary=response.summary,
+            success=False,
+            summary=f"task dispatch failed: {exc}",
+            failure_kind="dispatch_error",
         )
-        verify_execution_result(task, result)
-        task = transition_task(
-            task,
-            "completed" if response.success else "failed",
+    except ActionContractError as exc:
+        result = Result(
+            task_id=task.id,
+            action_id=action.id,
+            execution_id=execution_id,
+            success=False,
+            summary=f"action contract failed: {exc}",
+            failure_kind="contract_error",
         )
     except Exception as exc:
         result = Result(
@@ -84,9 +94,23 @@ def execute_task(
             execution_id=execution_id,
             success=False,
             summary=f"task execution failed: {exc}",
+            failure_kind="execution_error",
         )
-        verify_execution_result(task, result)
-        task = transition_task(task, "failed")
+    else:
+        result = Result(
+            task_id=task.id,
+            action_id=action.id,
+            execution_id=execution_id,
+            success=response.success,
+            summary=response.summary,
+            failure_kind="action_failed" if not response.success else None,
+        )
+
+    verify_execution_result(task, result)
+    task = transition_task(
+        task,
+        "completed" if result.success else "failed",
+    )
 
     results = load_results()
     results.append(result)
