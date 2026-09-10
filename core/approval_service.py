@@ -20,4 +20,5 @@ def create_approval_if_needed(
         task_id=action.task_id,
         required_level=required_level.name.lower(),
         reason=reason,
+        action_fingerprint=action.fingerprint(),
     )
