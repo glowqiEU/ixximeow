@@ -1,10 +1,9 @@
-from pathlib import Path
-
 from .evidence import Evidence
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-EVIDENCE_FILE = Path("evidence.json")
+EVIDENCE_FILE = runtime_file("evidence.json")
 
 
 def save_evidence(evidence: list[Evidence]) -> None:

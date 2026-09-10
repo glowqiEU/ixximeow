@@ -1,10 +1,9 @@
-from pathlib import Path
-
 from .outcome import Outcome
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-OUTCOMES_FILE = Path("outcomes.json")
+OUTCOMES_FILE = runtime_file("outcomes.json")
 
 
 def save_outcomes(outcomes: list[Outcome]) -> None:

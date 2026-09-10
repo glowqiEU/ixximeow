@@ -1,10 +1,9 @@
-from pathlib import Path
-
 from .models import Plan
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-PLANS_FILE = Path("plans.json")
+PLANS_FILE = runtime_file("plans.json")
 
 
 def save_plans(plans: list[Plan]) -> None:

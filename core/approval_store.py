@@ -1,10 +1,10 @@
 from dataclasses import asdict
-from pathlib import Path
 
 from .approval import Approval
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
-APPROVALS_FILE = Path("approvals.json")
+APPROVALS_FILE = runtime_file("approvals.json")
 
 
 def save_approvals(approvals: list[Approval]) -> None:

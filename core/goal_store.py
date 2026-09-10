@@ -1,11 +1,11 @@
-from pathlib import Path
 from typing import Optional
 
 from .goals import Goal
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-GOALS_FILE = Path("goals.json")
+GOALS_FILE = runtime_file("goals.json")
 
 
 def save_goals(goals: list[Goal]) -> None:

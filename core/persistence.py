@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 def save_json(path: Path, data: Any) -> None:
     """Persist JSON atomically so interrupted writes do not corrupt the target."""
+    path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = path.with_name(path.name + ".tmp")
     temporary_path.write_text(
         json.dumps(data, indent=2, ensure_ascii=False),

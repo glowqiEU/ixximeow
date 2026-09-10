@@ -1,10 +1,9 @@
-from pathlib import Path
-
 from .decision_evaluation import DecisionEvaluation
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-DECISION_EVALUATIONS_FILE = Path("decision_evaluations.json")
+DECISION_EVALUATIONS_FILE = runtime_file("decision_evaluations.json")
 
 
 def save_decision_evaluations(

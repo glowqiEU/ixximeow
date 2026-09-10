@@ -1,11 +1,11 @@
-from pathlib import Path
 from uuid import uuid4
 
 from .models import Task
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-TASKS_FILE = Path("tasks.json")
+TASKS_FILE = runtime_file("tasks.json")
 
 
 def save_tasks(tasks: list[Task]) -> None:

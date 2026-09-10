@@ -1,10 +1,10 @@
 from dataclasses import asdict
-from pathlib import Path
 
 from .action import Action
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
-ACTIONS_FILE = Path("actions.json")
+ACTIONS_FILE = runtime_file("actions.json")
 
 
 def save_actions(actions: list[Action]) -> None:

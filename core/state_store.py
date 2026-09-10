@@ -1,9 +1,8 @@
-from pathlib import Path
-
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 from .state import SystemState
 
-STATE_FILE = Path("state.json")
+STATE_FILE = runtime_file("state.json")
 
 
 def save_state(state: SystemState) -> None:

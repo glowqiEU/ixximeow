@@ -1,11 +1,11 @@
-from pathlib import Path
 from uuid import uuid4
 
 from .models import Result
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-RESULTS_FILE = Path("results.json")
+RESULTS_FILE = runtime_file("results.json")
 
 
 def save_results(results: list[Result]) -> None:

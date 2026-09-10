@@ -1,10 +1,9 @@
-from pathlib import Path
-
 from .memory import Memory
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-MEMORY_FILE = Path("memory.json")
+MEMORY_FILE = runtime_file("memory.json")
 
 
 def save_memories(memories: list[Memory]) -> None:

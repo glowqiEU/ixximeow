@@ -1,13 +1,12 @@
-import json
 from dataclasses import asdict
-from pathlib import Path
 from typing import Optional
 
 from .history import HistoryEvent
 from .persistence import load_json, save_json
+from .runtime_paths import runtime_file
 
 
-HISTORY_FILE = Path("history.json")
+HISTORY_FILE = runtime_file("history.json")
 
 
 def append_event(event: HistoryEvent) -> None:
