@@ -16,6 +16,7 @@ from .execution_store import (
 from .models import Result
 from .reconciliation import Reconciliation
 from .result_store import find_result_by_execution_id, upsert_result
+from .verification import verify_evidence, verify_execution_result
 
 
 def _build_evidence(
@@ -96,6 +97,23 @@ def _technical_result(
     return execution, result, evidence
 
 
+def _verify_technical_artifacts(
+    action: Action,
+    execution: Execution,
+    result: Result,
+    evidence: list[Evidence],
+) -> None:
+    """Validate technical artifacts before making any of them durable."""
+    verify_execution_result(
+        task=type("TaskRef", (), {"id": action.task_id})(),
+        action=action,
+        execution=execution,
+        result=result,
+    )
+    for item in evidence:
+        verify_evidence(result, execution, item)
+
+
 def _persist_technical_artifacts(
     result: Result,
     evidence: list[Evidence],
@@ -159,6 +177,7 @@ def execute_reserved_action(
             output=disposition.output,
         )
 
+    _verify_technical_artifacts(action, execution, result, evidence)
     _persist_technical_artifacts(result, evidence)
     upsert_execution(execution)
     return execution, result, evidence
