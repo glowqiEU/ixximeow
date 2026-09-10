@@ -39,7 +39,8 @@ class TestOrchestratorIntegration(unittest.TestCase):
         actions = load_actions()
         persisted_action = next(item for item in actions if item.id == result.action_id)
         self.assertEqual(persisted_action.task_id, task.id)
-        self.assertEqual(persisted_action.name, task.title)
+        self.assertEqual(persisted_action.name, "execute_task")
+        self.assertEqual(persisted_action.input, {"title": task.title})
 
         plans = load_plans()
         persisted_plan = next(item for item in plans if item.id == task.plan_id)
