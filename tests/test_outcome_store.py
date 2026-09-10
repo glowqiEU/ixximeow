@@ -29,7 +29,7 @@ class TestOutcomeStore(unittest.TestCase):
             self.assertEqual(loaded[0].id, outcome.id)
             self.assertEqual(loaded[0].task_id, "task-123")
             self.assertEqual(loaded[0].decision_id, "decision-456")
-            self.assertTrue(loaded[0].success)
+            self.assertIsNone(loaded[0].success)
             self.assertEqual(loaded[0].status, "success")
             self.assertEqual(loaded[0].summary, "objective was achieved")
             self.assertEqual(loaded[0].result_ids, ["result-789"])
