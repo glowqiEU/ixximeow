@@ -20,7 +20,7 @@ from core.state import SystemState
 class TestOrchestratorIntegration(unittest.TestCase):
     def test_full_lifecycle_persists(self):
         with patch(
-            "core.approval_gate.CURRENT_AUTONOMY_LEVEL",
+            "core.agent_config.CURRENT_AUTONOMY_LEVEL",
             AutonomyLevel.EXECUTE,
         ):
             decision, task, result = Orchestrator().run()
@@ -97,7 +97,7 @@ class TestOrchestratorIntegration(unittest.TestCase):
             ),
         ]) as mock_build_context:
             with patch(
-                "core.approval_gate.CURRENT_AUTONOMY_LEVEL",
+                "core.agent_config.CURRENT_AUTONOMY_LEVEL",
                 AutonomyLevel.EXECUTE,
             ):
                 Orchestrator().run()
