@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 from .evidence import Evidence
+from .file_lock import exclusive_file_lock
 from .persistence import load_json, save_json
 
 
@@ -29,12 +30,14 @@ def find_evidence_by_result_id(result_id: str) -> list[Evidence]:
 
 
 def upsert_evidence(item: Evidence) -> None:
-    items = load_evidence()
-    for index, existing in enumerate(items):
-        if existing.id == item.id:
-            items[index] = item
-            save_evidence(items)
-            return
+    """Atomically persist one evidence item by evidence identity."""
+    with exclusive_file_lock(EVIDENCE_FILE):
+        items = load_evidence()
+        for index, existing in enumerate(items):
+            if existing.id == item.id:
+                items[index] = item
+                save_evidence(items)
+                return
 
-    items.append(item)
-    save_evidence(items)
+        items.append(item)
+        save_evidence(items)
