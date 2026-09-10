@@ -52,10 +52,10 @@ class Task:
 @dataclass
 class Result:
     task_id: str
-    action_id: str
-    execution_id: str
     success: bool
     summary: str
+    action_id: Optional[str] = None
+    execution_id: Optional[str] = None
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -64,9 +64,9 @@ class Result:
     def __post_init__(self) -> None:
         if not self.task_id.strip():
             raise ValueError("result task_id cannot be empty")
-        if not self.action_id.strip():
+        if self.action_id is not None and not self.action_id.strip():
             raise ValueError("result action_id cannot be empty")
-        if not self.execution_id.strip():
+        if self.execution_id is not None and not self.execution_id.strip():
             raise ValueError("result execution_id cannot be empty")
         if not self.summary.strip():
             raise ValueError("result summary cannot be empty")
