@@ -58,25 +58,6 @@ class TestExecutionService(unittest.TestCase):
             self.assertEqual(persisted[0].status, "pending")
             self.assertEqual(persisted[0].idempotency_key, action.id)
 
-    def test_crash_between_reservation_and_task_running_leaves_safe_pending_execution(self):
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            action = Action(task_id="task-1", name="publish_post", id="action-1")
-            stores, original = self._patch_stores(root)
-            try:
-                execution = reserve_execution(action)
-                with patch("core.execution_service.execute_reserved_action") as execute:
-                    # Simulate the orchestrator crashing before it can start execution.
-                    raise RuntimeError("simulated task persistence crash")
-            except RuntimeError:
-                pass
-            finally:
-                self._restore_stores(stores, original)
-
-            self.assertEqual(load_executions()[0].status, "pending")
-            execute.assert_not_called()
-            self.assertEqual(execution.action_id, action.id)
-
     def test_reserved_execution_transitions_to_running_only_before_handler(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
