@@ -1,39 +1,50 @@
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from core.action import Action
 from core.action_registry import ActionRegistry
-from core.evidence_store import load_evidence
-from core.execution_service import execute_action
-from core.execution_store import load_executions
-from core.result_store import load_results
+from core.execution import Execution
+from core.execution_service import execute_action, recover_uncertain_execution
+from core.execution_store import load_executions, upsert_execution
 
 
 class TestExecutionService(unittest.TestCase):
+    def _patch_stores(self, root):
+        import core.evidence_store as evidence_store
+        import core.execution_store as execution_store
+        import core.result_store as result_store
+
+        original = (
+            evidence_store.EVIDENCE_FILE,
+            execution_store.EXECUTIONS_FILE,
+            result_store.RESULTS_FILE,
+        )
+        evidence_store.EVIDENCE_FILE = root / "evidence.json"
+        execution_store.EXECUTIONS_FILE = root / "executions.json"
+        result_store.RESULTS_FILE = root / "results.json"
+        return (evidence_store, execution_store, result_store), original
+
+    def _restore_stores(self, stores, original):
+        evidence_store, execution_store, result_store = stores
+        (
+            evidence_store.EVIDENCE_FILE,
+            execution_store.EXECUTIONS_FILE,
+            result_store.RESULTS_FILE,
+        ) = original
+
     def test_action_runs_through_execution_result_evidence_chain(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             registry = ActionRegistry()
             registry.register("publish_post", lambda action: {"summary": "published"})
             action = Action(task_id="task-1", name="publish_post", id="action-1")
-
-            import core.evidence_store as evidence_store
-            import core.execution_store as execution_store
-            import core.result_store as result_store
-
-            original = (
-                evidence_store.EVIDENCE_FILE,
-                execution_store.EXECUTIONS_FILE,
-                result_store.RESULTS_FILE,
-            )
-            evidence_store.EVIDENCE_FILE = root / "evidence.json"
-            execution_store.EXECUTIONS_FILE = root / "executions.json"
-            result_store.RESULTS_FILE = root / "results.json"
+            stores, original = self._patch_stores(root)
             try:
                 execution, result, evidence = execute_action(action, registry)
             finally:
-                evidence_store.EVIDENCE_FILE, execution_store.EXECUTIONS_FILE, result_store.RESULTS_FILE = original
+                self._restore_stores(stores, original)
 
             self.assertEqual(execution.action_id, action.id)
             self.assertEqual(execution.task_id, action.task_id)
@@ -51,28 +62,15 @@ class TestExecutionService(unittest.TestCase):
             registry = ActionRegistry()
             registry.register("publish_post", lambda action: (_ for _ in ()).throw(RuntimeError("boom")))
             action = Action(task_id="task-1", name="publish_post", id="action-1")
-
-            import core.evidence_store as evidence_store
-            import core.execution_store as execution_store
-            import core.result_store as result_store
-
-            original = (
-                evidence_store.EVIDENCE_FILE,
-                execution_store.EXECUTIONS_FILE,
-                result_store.RESULTS_FILE,
-            )
-            evidence_store.EVIDENCE_FILE = root / "evidence.json"
-            execution_store.EXECUTIONS_FILE = root / "executions.json"
-            result_store.RESULTS_FILE = root / "results.json"
+            stores, original = self._patch_stores(root)
             try:
                 execution, result, evidence = execute_action(action, registry)
             finally:
-                evidence_store.EVIDENCE_FILE, execution_store.EXECUTIONS_FILE, result_store.RESULTS_FILE = original
+                self._restore_stores(stores, original)
 
             self.assertEqual(execution.status, "failed")
             self.assertFalse(result.success)
             self.assertEqual(evidence[0].value, False)
-
 
     def test_duplicate_action_is_rejected_before_handler_runs(self):
         with TemporaryDirectory() as directory:
@@ -85,82 +83,122 @@ class TestExecutionService(unittest.TestCase):
                 return {"summary": "published"}
 
             registry.register("publish_post", handler)
-            action = Action(
-                task_id="task-1",
-                name="publish_post",
-                id="action-1",
-            )
-
-            import core.evidence_store as evidence_store
-            import core.execution_store as execution_store
-            import core.result_store as result_store
-
-            original = (
-                evidence_store.EVIDENCE_FILE,
-                execution_store.EXECUTIONS_FILE,
-                result_store.RESULTS_FILE,
-            )
-
-            evidence_store.EVIDENCE_FILE = root / "evidence.json"
-            execution_store.EXECUTIONS_FILE = root / "executions.json"
-            result_store.RESULTS_FILE = root / "results.json"
-
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
             try:
                 execute_action(action, registry)
-
                 with self.assertRaises(ValueError):
                     execute_action(action, registry)
             finally:
-                (
-                    evidence_store.EVIDENCE_FILE,
-                    execution_store.EXECUTIONS_FILE,
-                    result_store.RESULTS_FILE,
-                ) = original
+                self._restore_stores(stores, original)
 
             self.assertEqual(calls, ["action-1"])
-
 
     def test_duplicate_action_execution_is_rejected_by_idempotency(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             registry = ActionRegistry()
-            registry.register(
-                "publish_post",
-                lambda action: {"summary": "published"},
-            )
-            action = Action(
-                task_id="task-1",
-                name="publish_post",
-                id="action-1",
-            )
-
-            import core.evidence_store as evidence_store
-            import core.execution_store as execution_store
-            import core.result_store as result_store
-
-            original = (
-                evidence_store.EVIDENCE_FILE,
-                execution_store.EXECUTIONS_FILE,
-                result_store.RESULTS_FILE,
-            )
-            evidence_store.EVIDENCE_FILE = root / "evidence.json"
-            execution_store.EXECUTIONS_FILE = root / "executions.json"
-            result_store.RESULTS_FILE = root / "results.json"
-
+            registry.register("publish_post", lambda action: {"summary": "published"})
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
             try:
                 first, _, _ = execute_action(action, registry)
-
                 with self.assertRaises(ValueError):
                     execute_action(action, registry)
             finally:
-                (
-                    evidence_store.EVIDENCE_FILE,
-                    execution_store.EXECUTIONS_FILE,
-                    result_store.RESULTS_FILE,
-                ) = original
+                self._restore_stores(stores, original)
 
             self.assertEqual(first.status, "succeeded")
             self.assertEqual(first.idempotency_key, action.id)
+
+    def test_artifact_failure_does_not_reclassify_successful_handler(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register("publish_post", lambda action: {"summary": "published"})
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                with patch("core.execution_service._build_evidence", side_effect=RuntimeError("artifact failure")):
+                    with self.assertRaises(RuntimeError):
+                        execute_action(action, registry)
+
+                executions = load_executions()
+                self.assertEqual(len(executions), 1)
+                self.assertEqual(executions[0].action_id, action.id)
+                self.assertEqual(executions[0].task_id, action.task_id)
+                self.assertEqual(executions[0].status, "succeeded")
+                self.assertEqual(executions[0].attempt, 1)
+                self.assertIsNotNone(executions[0].finished_at)
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_recover_uncertain_execution_never_reruns_handler(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            calls = []
+
+            def handler(action):
+                calls.append(action.id)
+                return {"summary": "published"}
+
+            registry.register("publish_post", handler)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = Execution(
+                    action_id=action.id,
+                    task_id=action.task_id,
+                    status="uncertain",
+                    attempt=1,
+                    id="execution-1",
+                )
+                upsert_execution(execution)
+
+                recovered, result, evidence = recover_uncertain_execution(
+                    execution.id,
+                    action,
+                    lambda current_action: "already_succeeded",
+                )
+
+                self.assertEqual(recovered.id, execution.id)
+                self.assertEqual(recovered.status, "succeeded")
+                self.assertEqual(recovered.attempt, 1)
+                self.assertIsNotNone(result)
+                self.assertTrue(result.success)
+                self.assertEqual(len(evidence), 1)
+                self.assertEqual(calls, [])
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_recover_unknown_keeps_execution_uncertain(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = Execution(
+                    action_id=action.id,
+                    task_id=action.task_id,
+                    status="uncertain",
+                    attempt=1,
+                    id="execution-1",
+                )
+                upsert_execution(execution)
+
+                recovered, result, evidence = recover_uncertain_execution(
+                    execution.id,
+                    action,
+                    lambda current_action: "unknown",
+                )
+
+                self.assertEqual(recovered.id, execution.id)
+                self.assertEqual(recovered.status, "uncertain")
+                self.assertIsNone(result)
+                self.assertEqual(evidence, [])
+            finally:
+                self._restore_stores(stores, original)
 
 
 if __name__ == "__main__":
