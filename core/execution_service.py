@@ -239,10 +239,11 @@ def recover_uncertain_execution(
             if item.execution_id != execution.id or item.result_id != result.id:
                 raise ValueError("existing recovery evidence does not match artifacts")
 
+    execution.transition("succeeded")
+    verify_technical_artifacts(action, execution, result, evidence)
     upsert_result(result)
     for item in evidence:
         upsert_evidence(item)
 
-    execution.transition("succeeded")
     upsert_execution(execution)
     return execution, result, evidence
