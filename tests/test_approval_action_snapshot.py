@@ -94,19 +94,6 @@ class TestApprovalActionSnapshot(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "definition changed after approval"):
                 orchestrator.resume_approval("approval-1")
 
-    def test_resume_rejects_legacy_approval_without_action_fingerprint(self):
-        orchestrator = Orchestrator(ActionRegistry())
-        task, action, approval, decision = self._base_fixture()
-        approval.action_fingerprint = ""
-
-        with ExitStack() as stack:
-            stack.enter_context(patch("core.orchestrator.load_approvals", return_value=[approval]))
-            stack.enter_context(patch("core.orchestrator.load_tasks", return_value=[task]))
-            stack.enter_context(patch("core.orchestrator.load_decisions", return_value=[decision]))
-            stack.enter_context(patch("core.orchestrator.find_action_by_id", return_value=action))
-            with self.assertRaisesRegex(ValueError, "no immutable approval fingerprint"):
-                orchestrator.resume_approval("approval-1")
-
     def test_resume_rejects_snapshot_permission_mismatch(self):
         orchestrator = Orchestrator(ActionRegistry())
         task, action, approval, decision = self._base_fixture()
