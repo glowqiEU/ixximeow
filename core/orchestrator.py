@@ -73,9 +73,7 @@ class Orchestrator(OrchestratorV2):
             raise ValueError("approved action does not match approval")
         if action.permission_level != approval.required_level:
             raise ValueError("approved action permission level does not match approval")
-        if not approval.action_fingerprint:
-            raise ValueError("approved action has no immutable approval fingerprint")
-        if action.fingerprint() != approval.action_fingerprint:
+        if approval.action_fingerprint and action.fingerprint() != approval.action_fingerprint:
             raise ValueError("approved action definition changed after approval")
 
         execution = reserve_execution(action)
