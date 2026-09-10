@@ -1,9 +1,11 @@
+from typing import Optional
+
 from .action import Action
 from .action_registry import ActionRegistry
 from .evidence import Evidence
 from .evidence_store import upsert_evidence
 from .execution import Execution
-from .execution_store import upsert_execution
+from .execution_store import find_execution_by_id, upsert_execution
 from .models import Result
 from .result_store import upsert_result
 
@@ -63,6 +65,17 @@ def execute_action(
 
     try:
         output = registry.execute(action)
+    except Exception as exc:
+        execution.transition("failed")
+        result = Result(
+            task_id=action.task_id,
+            action_id=action.id,
+            execution_id=execution.id,
+            success=False,
+            summary=f"action execution failed: {exc}",
+        )
+        evidence = _build_evidence(result, execution, None, result.summary)
+    else:
         summary = (
             output.get("summary", "action execution completed")
             if isinstance(output, dict)
@@ -77,17 +90,57 @@ def execute_action(
             summary=summary,
         )
         evidence = _build_evidence(result, execution, output, summary)
-    except Exception as exc:
-        execution.transition("failed")
-        result = Result(
-            task_id=action.task_id,
-            action_id=action.id,
-            execution_id=execution.id,
-            success=False,
-            summary=f"action execution failed: {exc}",
-        )
-        evidence = _build_evidence(result, execution, None, result.summary)
 
+    upsert_execution(execution)
+    upsert_result(result)
+    for item in evidence:
+        upsert_evidence(item)
+    return execution, result, evidence
+
+
+def recover_uncertain_execution(
+    execution_id: str,
+    action: Action,
+    reconciler,
+) -> tuple[Execution, Optional[Result], list[Evidence]]:
+    """Reconcile an uncertain execution without rerunning the action handler."""
+    execution = find_execution_by_id(execution_id)
+    if execution is None:
+        raise ValueError("execution not found")
+    if execution.status != "uncertain":
+        raise ValueError(
+            f"execution is not uncertain: {execution.status}"
+        )
+    if execution.action_id != action.id:
+        raise ValueError("execution does not belong to action")
+    if execution.task_id != action.task_id:
+        raise ValueError("execution does not belong to task")
+
+    reconciliation = reconciler(action)
+    if reconciliation in {"unknown", "not_executed"}:
+        return execution, None, []
+    if reconciliation != "already_succeeded":
+        raise ValueError(f"invalid reconciliation result: {reconciliation}")
+
+    execution.transition("succeeded")
+    result = Result(
+        task_id=action.task_id,
+        action_id=action.id,
+        execution_id=execution.id,
+        success=True,
+        summary="execution recovered: external state already succeeded",
+    )
+    evidence = [
+        Evidence(
+            result_id=result.id,
+            execution_id=execution.id,
+            kind="verification",
+            claim="execution_reconciled",
+            value=True,
+            content="external state confirmed the action had already succeeded",
+            verified=True,
+        )
+    ]
     upsert_execution(execution)
     upsert_result(result)
     for item in evidence:
