@@ -1,5 +1,7 @@
 from typing import Optional
+from uuid import uuid4
 
+from .action import Action
 from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
@@ -27,10 +29,14 @@ def execute_task(
             raise ValueError(f"invalid approval status: {approval.status}")
 
     task = transition_task(task, "running")
+    action = Action(task_id=task.id, name=task.title)
+    execution_id = str(uuid4())
 
     try:
         result = Result(
             task_id=task.id,
+            action_id=action.id,
+            execution_id=execution_id,
             success=True,
             summary="task execution completed",
         )
@@ -40,6 +46,8 @@ def execute_task(
     except Exception as exc:
         result = Result(
             task_id=task.id,
+            action_id=action.id,
+            execution_id=execution_id,
             success=False,
             summary=f"task execution failed: {exc}",
         )
