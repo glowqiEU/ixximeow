@@ -8,7 +8,6 @@ from .decision_evaluation_store import save_decision_evaluations
 from .decision_evaluator import evaluate_decision
 from .decision_selection import select_decision
 from .decision_store import load_decisions, save_decisions
-from .evidence_store import upsert_evidence
 from .execution_service import execute_reserved_action, reserve_execution
 from .history import HistoryEvent
 from .history_store import append_event
@@ -60,7 +59,6 @@ class OrchestratorV2:
         verify_execution_result(task, action, execution, result)
         for item in evidence:
             verify_evidence(result, execution, item)
-            upsert_evidence(item)
 
         objective = build_objective(decision, task.id)
         outcome = resolve_outcome(decision, task, objective, [result], evidence)
