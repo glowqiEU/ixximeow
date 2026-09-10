@@ -1,5 +1,5 @@
 from .memory import Memory
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -11,5 +11,5 @@ def save_memories(memories: list[Memory]) -> None:
 
 
 def load_memories() -> list[Memory]:
-    data = load_json(MEMORY_FILE, [])
+    data = load_record_list(MEMORY_FILE)
     return [Memory(**item) for item in data]

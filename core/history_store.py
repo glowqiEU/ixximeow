@@ -2,7 +2,7 @@ from dataclasses import asdict
 from typing import Optional
 
 from .history import HistoryEvent
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -16,7 +16,7 @@ def append_event(event: HistoryEvent) -> None:
 
 
 def load_events(limit: Optional[int] = None) -> list[HistoryEvent]:
-    data = load_json(HISTORY_FILE, [])
+    data = load_record_list(HISTORY_FILE)
     events = [HistoryEvent(**item) for item in data]
 
     if limit is not None:

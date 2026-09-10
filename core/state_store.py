@@ -1,4 +1,4 @@
-from .persistence import load_json, save_json
+from .persistence import load_record, save_json
 from .runtime_paths import runtime_file
 from .state import SystemState
 
@@ -10,7 +10,7 @@ def save_state(state: SystemState) -> None:
 
 
 def load_state() -> SystemState:
-    data = load_json(STATE_FILE)
+    data = load_record(STATE_FILE)
     if data is None:
         return SystemState()
 

@@ -1,5 +1,5 @@
 from .decision_evaluation import DecisionEvaluation
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -16,5 +16,5 @@ def save_decision_evaluations(
 
 
 def load_decision_evaluations() -> list[DecisionEvaluation]:
-    data = load_json(DECISION_EVALUATIONS_FILE, [])
+    data = load_record_list(DECISION_EVALUATIONS_FILE)
     return [DecisionEvaluation(**item) for item in data]

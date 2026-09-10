@@ -21,5 +21,21 @@ def load_json(path: Path, default: Optional[Any] = None) -> Any:
 
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError) as exc:
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
         raise ValueError(f"invalid persistence file: {path}") from exc
+
+
+def load_record_list(path: Path) -> list[dict[str, Any]]:
+    """Load the validated list-of-records shape used by collection stores."""
+    data = load_json(path, [])
+    if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
+        raise ValueError(f"invalid record collection: {path}")
+    return data
+
+
+def load_record(path: Path) -> Optional[dict[str, Any]]:
+    """Load the optional mapping shape used by singleton stores."""
+    data = load_json(path)
+    if data is not None and not isinstance(data, dict):
+        raise ValueError(f"invalid record: {path}")
+    return data

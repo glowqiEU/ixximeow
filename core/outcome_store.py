@@ -1,5 +1,5 @@
 from .outcome import Outcome
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -11,5 +11,5 @@ def save_outcomes(outcomes: list[Outcome]) -> None:
 
 
 def load_outcomes() -> list[Outcome]:
-    data = load_json(OUTCOMES_FILE, [])
+    data = load_record_list(OUTCOMES_FILE)
     return [Outcome(**item) for item in data]

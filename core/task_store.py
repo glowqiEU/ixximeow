@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from .models import Task
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -13,7 +13,7 @@ def save_tasks(tasks: list[Task]) -> None:
 
 
 def load_tasks() -> list[Task]:
-    data = load_json(TASKS_FILE, [])
+    data = load_record_list(TASKS_FILE)
     return [Task(**item) for item in data]
 
 

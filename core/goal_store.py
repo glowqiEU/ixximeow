@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .goals import Goal
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -13,7 +13,7 @@ def save_goals(goals: list[Goal]) -> None:
 
 
 def load_goals() -> list[Goal]:
-    data = load_json(GOALS_FILE, [])
+    data = load_record_list(GOALS_FILE)
     return [Goal(**item) for item in data]
 
 

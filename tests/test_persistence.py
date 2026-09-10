@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from core.persistence import load_json, save_json
+from core.persistence import load_json, load_record, load_record_list, save_json
 
 
 class TestPersistence(unittest.TestCase):
@@ -41,6 +41,27 @@ class TestPersistence(unittest.TestCase):
 
             self.assertEqual(load_json(path), {"new": True})
             self.assertFalse(path.with_name("state.json.tmp").exists())
+
+    def test_record_list_rejects_wrong_top_level_shape(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "records.json"
+            save_json(path, {"not": "a list"})
+            with self.assertRaisesRegex(ValueError, "invalid record collection"):
+                load_record_list(path)
+
+    def test_record_list_rejects_non_mapping_items(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "records.json"
+            save_json(path, [{"valid": True}, "invalid"])
+            with self.assertRaisesRegex(ValueError, "invalid record collection"):
+                load_record_list(path)
+
+    def test_single_record_rejects_wrong_shape(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "state.json"
+            save_json(path, [])
+            with self.assertRaisesRegex(ValueError, "invalid record"):
+                load_record(path)
 
 
 if __name__ == "__main__":

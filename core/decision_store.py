@@ -1,5 +1,5 @@
 from .models import Decision
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -11,5 +11,5 @@ def save_decisions(decisions: list[Decision]) -> None:
 
 
 def load_decisions() -> list[Decision]:
-    data = load_json(DECISIONS_FILE, [])
+    data = load_record_list(DECISIONS_FILE)
     return [Decision(**item) for item in data]

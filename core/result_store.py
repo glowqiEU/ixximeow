@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from .models import Result
-from .persistence import load_json, save_json
+from .persistence import load_record_list, save_json
 from .runtime_paths import runtime_file
 
 
@@ -13,7 +13,7 @@ def save_results(results: list[Result]) -> None:
 
 
 def load_results() -> list[Result]:
-    data = load_json(RESULTS_FILE, [])
+    data = load_record_list(RESULTS_FILE)
     return [Result(**item) for item in data]
 
 
