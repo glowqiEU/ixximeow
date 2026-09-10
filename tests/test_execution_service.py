@@ -6,7 +6,12 @@ from unittest.mock import patch
 from core.action import Action
 from core.action_registry import ActionRegistry
 from core.execution import Execution
-from core.execution_service import execute_action, recover_uncertain_execution
+from core.execution_service import (
+    execute_action,
+    execute_reserved_action,
+    recover_uncertain_execution,
+    reserve_execution,
+)
 from core.execution_store import load_executions, upsert_execution
 from core.evidence_store import find_evidence_by_result_id
 from core.reconciliation import Reconciliation
@@ -36,6 +41,65 @@ class TestExecutionService(unittest.TestCase):
             execution_store.EXECUTIONS_FILE,
             result_store.RESULTS_FILE,
         ) = original
+
+    def test_reservation_is_pending_before_execution(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = reserve_execution(action)
+                persisted = load_executions()
+            finally:
+                self._restore_stores(stores, original)
+
+            self.assertEqual(execution.status, "pending")
+            self.assertEqual(len(persisted), 1)
+            self.assertEqual(persisted[0].status, "pending")
+            self.assertEqual(persisted[0].idempotency_key, action.id)
+
+    def test_crash_between_reservation_and_task_running_leaves_safe_pending_execution(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = reserve_execution(action)
+                with patch("core.execution_service.execute_reserved_action") as execute:
+                    # Simulate the orchestrator crashing before it can start execution.
+                    raise RuntimeError("simulated task persistence crash")
+            except RuntimeError:
+                pass
+            finally:
+                self._restore_stores(stores, original)
+
+            self.assertEqual(load_executions()[0].status, "pending")
+            execute.assert_not_called()
+            self.assertEqual(execution.action_id, action.id)
+
+    def test_reserved_execution_transitions_to_running_only_before_handler(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            calls = []
+
+            def handler(action):
+                calls.append(action.id)
+                return {"summary": "published"}
+
+            registry.register("publish_post", handler)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = reserve_execution(action)
+                completed, result, _ = execute_reserved_action(action, execution, registry)
+            finally:
+                self._restore_stores(stores, original)
+
+            self.assertEqual(completed.status, "succeeded")
+            self.assertEqual(completed.attempt, 1)
+            self.assertEqual(result.execution_id, execution.id)
+            self.assertEqual(calls, [action.id])
 
     def test_action_runs_through_execution_result_evidence_chain(self):
         with TemporaryDirectory() as directory:
@@ -114,7 +178,7 @@ class TestExecutionService(unittest.TestCase):
             self.assertEqual(first.status, "succeeded")
             self.assertEqual(first.idempotency_key, action.id)
 
-    def test_artifact_failure_does_not_reclassify_successful_handler(self):
+    def test_artifact_failure_leaves_durable_execution_running_for_recovery(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             registry = ActionRegistry()
@@ -130,9 +194,9 @@ class TestExecutionService(unittest.TestCase):
                 self.assertEqual(len(executions), 1)
                 self.assertEqual(executions[0].action_id, action.id)
                 self.assertEqual(executions[0].task_id, action.task_id)
-                self.assertEqual(executions[0].status, "succeeded")
+                self.assertEqual(executions[0].status, "running")
                 self.assertEqual(executions[0].attempt, 1)
-                self.assertIsNotNone(executions[0].finished_at)
+                self.assertIsNone(executions[0].finished_at)
             finally:
                 self._restore_stores(stores, original)
 
