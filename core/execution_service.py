@@ -5,6 +5,7 @@ from .action_registry import ActionRegistry
 from .evidence import Evidence
 from .evidence_store import find_evidence_by_result_id, upsert_evidence
 from .execution import Execution
+from .execution_disposition import ExecutionDisposition
 from .execution_store import (
     claim_execution_running,
     find_execution_by_id,
@@ -77,11 +78,29 @@ def reserve_execution(action: Action) -> Execution:
     return reserve_execution_slot(execution)
 
 
+def _technical_result(
+    action: Action,
+    execution: Execution,
+    success: bool,
+    summary: str,
+    output,
+) -> tuple[Execution, Result, list[Evidence]]:
+    result = Result(
+        task_id=action.task_id,
+        action_id=action.id,
+        execution_id=execution.id,
+        success=success,
+        summary=summary,
+    )
+    evidence = _build_evidence(result, execution, output, summary)
+    return execution, result, evidence
+
+
 def execute_reserved_action(
     action: Action,
     execution: Execution,
     registry: ActionRegistry,
-) -> tuple[Execution, Result, list[Evidence]]:
+) -> tuple[Execution, Optional[Result], list[Evidence]]:
     """Claim a pending execution and produce its technical artifacts."""
     if execution.action_id != action.id:
         raise ValueError("execution does not belong to action")
@@ -94,29 +113,41 @@ def execute_reserved_action(
         output = registry.execute(action)
     except Exception as exc:
         execution.transition("failed")
-        result = Result(
-            task_id=action.task_id,
-            action_id=action.id,
-            execution_id=execution.id,
+        execution, result, evidence = _technical_result(
+            action,
+            execution,
             success=False,
             summary=f"action execution failed: {exc}",
+            output=None,
         )
-        evidence = _build_evidence(result, execution, None, result.summary)
     else:
-        summary = (
-            output.get("summary", "action execution completed")
-            if isinstance(output, dict)
-            else str(output)
+        disposition = (
+            output
+            if isinstance(output, ExecutionDisposition)
+            else ExecutionDisposition(
+                status="succeeded",
+                summary=(
+                    output.get("summary", "action execution completed")
+                    if isinstance(output, dict)
+                    else str(output)
+                ),
+                output=output,
+            )
         )
-        execution.transition("succeeded")
-        result = Result(
-            task_id=action.task_id,
-            action_id=action.id,
-            execution_id=execution.id,
-            success=True,
-            summary=summary,
+
+        if disposition.status == "uncertain":
+            execution.transition("uncertain")
+            upsert_execution(execution)
+            return execution, None, []
+
+        execution.transition(disposition.status)
+        execution, result, evidence = _technical_result(
+            action,
+            execution,
+            success=disposition.status == "succeeded",
+            summary=disposition.summary,
+            output=disposition.output,
         )
-        evidence = _build_evidence(result, execution, output, summary)
 
     upsert_execution(execution)
     upsert_result(result)
@@ -128,7 +159,7 @@ def execute_reserved_action(
 def execute_action(
     action: Action,
     registry: ActionRegistry,
-) -> tuple[Execution, Result, list[Evidence]]:
+) -> tuple[Execution, Optional[Result], list[Evidence]]:
     """Reserve and execute one explicit action."""
     execution = reserve_execution(action)
     return execute_reserved_action(action, execution, registry)
