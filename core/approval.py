@@ -7,6 +7,13 @@ from .permissions import AutonomyLevel
 
 APPROVAL_STATUSES = {"pending", "approved", "rejected", "cancelled"}
 
+ALLOWED_TRANSITIONS = {
+    "pending": {"approved", "rejected", "cancelled"},
+    "approved": set(),
+    "rejected": set(),
+    "cancelled": set(),
+}
+
 
 @dataclass
 class Approval:
@@ -38,3 +45,16 @@ class Approval:
             raise ValueError(
                 f"invalid approval required level: {self.required_level}"
             ) from exc
+
+    def transition(self, new_status: str) -> "Approval":
+        if new_status not in APPROVAL_STATUSES:
+            raise ValueError(f"invalid approval status: {new_status}")
+
+        allowed = ALLOWED_TRANSITIONS.get(self.status, set())
+        if new_status not in allowed:
+            raise ValueError(
+                f"invalid approval transition: {self.status} -> {new_status}"
+            )
+
+        self.status = new_status
+        return self
