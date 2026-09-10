@@ -9,7 +9,7 @@ from .decision_evaluator import evaluate_decision
 from .decision_selection import select_decision
 from .decision_store import load_decisions, save_decisions
 from .evidence_store import upsert_evidence
-from .execution_service import execute_action
+from .execution_service import execute_reserved_action, reserve_execution
 from .history import HistoryEvent
 from .history_store import append_event
 from .memory_query import build_memory_query
@@ -33,8 +33,10 @@ class OrchestratorV2:
     def __init__(self, registry: ActionRegistry) -> None:
         self.registry = registry
 
-    def _finalize(self, task, decision, action, state, tasks):
-        execution, result, evidence = execute_action(action, self.registry)
+    def _finalize(self, task, decision, action, execution, state, tasks):
+        execution, result, evidence = execute_reserved_action(
+            action, execution, self.registry
+        )
         verify_execution_result(task, action, execution, result)
         for item in evidence:
             verify_evidence(result, execution, item)
@@ -136,7 +138,8 @@ class OrchestratorV2:
             )
             return decision, task, None
 
+        execution = reserve_execution(action)
         task = transition_task(task, "running")
         tasks[-1] = task
         save_tasks(tasks)
-        return self._finalize(task, decision, action, state, tasks)
+        return self._finalize(task, decision, action, execution, state, tasks)
