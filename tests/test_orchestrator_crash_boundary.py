@@ -1,4 +1,5 @@
 import unittest
+from contextlib import ExitStack
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -46,49 +47,70 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
                     raise RuntimeError("simulated crash")
                 persist_tasks(tasks)
 
-            with patch("core.execution_store.EXECUTIONS_FILE", root / "executions.json"), \
-                 patch("core.task_store.TASKS_FILE", root / "tasks.json"), \
-                 patch("core.orchestrator_v2.build_context", return_value=context), \
-                 patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
-                 patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
-                     decision_id=decision.id,
-                     relevance=1.0,
-                     confidence=1.0,
-                     risk=0.0,
-                     effort=0.0,
-                     reason="strong candidate",
-                 )), \
-                 patch("core.orchestrator_v2.select_decision", return_value=decision), \
-                 patch("core.orchestrator_v2.load_decisions", return_value=[]), \
-                 patch("core.orchestrator_v2.save_decisions"), \
-                 patch("core.orchestrator_v2.load_plans", return_value=[]), \
-                 patch("core.orchestrator_v2.save_plans"), \
-                 patch("core.orchestrator_v2.load_tasks", return_value=[]), \
-                 patch("core.orchestrator_v2.check_approval", return_value=None), \
-                 patch("core.orchestrator_v2.upsert_evidence"), \
-                 patch("core.orchestrator_v2.upsert_outcome"), \
-                 patch("core.orchestrator_v2.append_event"), \
-                 patch("core.orchestrator_v2.apply_decision", return_value=state), \
-                 patch("core.orchestrator_v2.apply_result", return_value=state), \
-                 patch("core.orchestrator_v2.save_state"), \
-                 patch("core.orchestrator_v2.save_tasks", side_effect=save_tasks_then_crash), \
-                 patch("core.orchestrator_v2.execute_reserved_action") as execute:
+            with ExitStack() as stack:
+                stack.enter_context(
+                    patch("core.execution_store.EXECUTIONS_FILE", root / "executions.json")
+                )
+                stack.enter_context(
+                    patch("core.task_store.TASKS_FILE", root / "tasks.json")
+                )
+                stack.enter_context(
+                    patch("core.orchestrator_v2.build_context", return_value=context)
+                )
+                stack.enter_context(
+                    patch("core.orchestrator_v2.generate_candidates", return_value=[decision])
+                )
+                stack.enter_context(
+                    patch(
+                        "core.orchestrator_v2.evaluate_decision",
+                        return_value=DecisionEvaluation(
+                            decision_id=decision.id,
+                            relevance=1.0,
+                            confidence=1.0,
+                            risk=0.0,
+                            effort=0.0,
+                            reason="strong candidate",
+                        ),
+                    )
+                )
+                stack.enter_context(
+                    patch("core.orchestrator_v2.select_decision", return_value=decision)
+                )
+                stack.enter_context(patch("core.orchestrator_v2.load_decisions", return_value=[]))
+                stack.enter_context(patch("core.orchestrator_v2.save_decisions"))
+                stack.enter_context(patch("core.orchestrator_v2.load_plans", return_value=[]))
+                stack.enter_context(patch("core.orchestrator_v2.save_plans"))
+                stack.enter_context(patch("core.orchestrator_v2.load_tasks", return_value=[]))
+                stack.enter_context(patch("core.orchestrator_v2.check_approval", return_value=None))
+                stack.enter_context(patch("core.orchestrator_v2.upsert_evidence"))
+                stack.enter_context(patch("core.orchestrator_v2.upsert_outcome"))
+                stack.enter_context(patch("core.orchestrator_v2.append_event"))
+                stack.enter_context(patch("core.orchestrator_v2.apply_decision", return_value=state))
+                stack.enter_context(patch("core.orchestrator_v2.apply_result", return_value=state))
+                stack.enter_context(patch("core.orchestrator_v2.save_state"))
+                stack.enter_context(
+                    patch("core.orchestrator_v2.save_tasks", side_effect=save_tasks_then_crash)
+                )
+                execute = stack.enter_context(
+                    patch("core.orchestrator_v2.execute_reserved_action")
+                )
+
                 with self.assertRaises(RuntimeError):
                     Orchestrator(registry).run()
 
                 persisted_tasks = load_tasks()
                 persisted_executions = load_executions()
 
-            self.assertEqual(save_calls, 3)
-            self.assertEqual(len(persisted_tasks), 1)
-            self.assertEqual(persisted_tasks[0].status, "pending")
-            self.assertIsNotNone(persisted_tasks[0].action_id)
-            self.assertEqual(len(persisted_executions), 1)
-            self.assertEqual(persisted_executions[0].status, "pending")
-            self.assertEqual(persisted_executions[0].task_id, persisted_tasks[0].id)
-            self.assertEqual(persisted_executions[0].action_id, persisted_tasks[0].action_id)
-            execute.assert_not_called()
-            self.assertEqual(handler_calls, [])
+                self.assertEqual(save_calls, 3)
+                self.assertEqual(len(persisted_tasks), 1)
+                self.assertEqual(persisted_tasks[0].status, "pending")
+                self.assertIsNotNone(persisted_tasks[0].action_id)
+                self.assertEqual(len(persisted_executions), 1)
+                self.assertEqual(persisted_executions[0].status, "pending")
+                self.assertEqual(persisted_executions[0].task_id, persisted_tasks[0].id)
+                self.assertEqual(persisted_executions[0].action_id, persisted_tasks[0].action_id)
+                execute.assert_not_called()
+                self.assertEqual(handler_calls, [])
 
 
 if __name__ == "__main__":
