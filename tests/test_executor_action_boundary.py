@@ -66,7 +66,8 @@ class TestExecutorActionBoundary(unittest.TestCase):
             id="approval-1",
         )
 
-        with patch("core.executor.load_actions", return_value=[]), \
+        with patch("core.executor.load_approvals", return_value=[approval]), \
+             patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results"), \
@@ -91,11 +92,42 @@ class TestExecutorActionBoundary(unittest.TestCase):
         )
 
         with patch("core.executor.load_actions", return_value=[]), \
-             patch("core.executor.save_actions"), \
              patch("core.executor.load_results"), \
              patch("core.executor.save_results"):
             with self.assertRaises(PermissionError):
                 execute_task(task, registry=registry)
+
+        self.assertEqual(seen, [])
+
+    def test_executor_rejects_unpersisted_approved_permission(self):
+        registry = ActionRegistry()
+        seen = []
+
+        def handler(action):
+            seen.append(action)
+            return ActionResponse(success=True, summary="should not run")
+
+        registry.register("execute_task", handler)
+        task = Task(
+            title="publish post",
+            id="task-1",
+            approval_id="approval-1",
+            required_level="publish",
+        )
+        approval = Approval(
+            task_id="task-1",
+            required_level="publish",
+            reason="publishing requires approval",
+            status="approved",
+            id="approval-1",
+        )
+
+        with patch("core.executor.load_approvals", return_value=[]), \
+             patch("core.executor.load_actions", return_value=[]), \
+             patch("core.executor.load_results"), \
+             patch("core.executor.save_results"):
+            with self.assertRaises(PermissionError):
+                execute_task(task, approval=approval, registry=registry)
 
         self.assertEqual(seen, [])
 
