@@ -10,7 +10,7 @@ from core.execution_store import load_executions
 from core.models import Decision
 from core.orchestrator import Orchestrator
 from core.state import SystemState
-from core.task_store import load_tasks
+from core.task_store import load_tasks, save_tasks as persist_tasks
 
 
 class TestOrchestratorCrashBoundary(unittest.TestCase):
@@ -37,6 +37,15 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
 
         with TemporaryDirectory() as directory:
             root = Path(directory)
+            save_calls = 0
+
+            def save_tasks_then_crash(tasks):
+                nonlocal save_calls
+                save_calls += 1
+                if save_calls == 3:
+                    raise RuntimeError("simulated crash")
+                persist_tasks(tasks)
+
             with patch("core.execution_store.EXECUTIONS_FILE", root / "executions.json"), \
                  patch("core.task_store.TASKS_FILE", root / "tasks.json"), \
                  patch("core.orchestrator_v2.build_context", return_value=context), \
@@ -62,7 +71,7 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
                  patch("core.orchestrator_v2.apply_decision", return_value=state), \
                  patch("core.orchestrator_v2.apply_result", return_value=state), \
                  patch("core.orchestrator_v2.save_state"), \
-                 patch("core.orchestrator_v2.save_tasks", side_effect=[None, None, RuntimeError("simulated crash")]), \
+                 patch("core.orchestrator_v2.save_tasks", side_effect=save_tasks_then_crash), \
                  patch("core.orchestrator_v2.execute_reserved_action") as execute:
                 with self.assertRaises(RuntimeError):
                     Orchestrator(registry).run()
@@ -70,6 +79,7 @@ class TestOrchestratorCrashBoundary(unittest.TestCase):
                 persisted_tasks = load_tasks()
                 persisted_executions = load_executions()
 
+            self.assertEqual(save_calls, 3)
             self.assertEqual(len(persisted_tasks), 1)
             self.assertEqual(persisted_tasks[0].status, "pending")
             self.assertIsNotNone(persisted_tasks[0].action_id)
