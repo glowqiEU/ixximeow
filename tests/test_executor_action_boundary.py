@@ -37,8 +37,33 @@ class TestExecutorActionBoundary(unittest.TestCase):
         self.assertEqual(seen[0].task_id, "task-1")
         self.assertEqual(seen[0].name, "execute_task")
         self.assertEqual(seen[0].input, {"title": "create post"})
+        self.assertEqual(seen[0].permission_level, "execute")
         self.assertEqual(result.action_id, seen[0].id)
         self.assertTrue(result.execution_id)
+
+    def test_executor_preserves_task_required_permission_on_action(self):
+        registry = ActionRegistry()
+        seen = []
+
+        def handler(action):
+            seen.append(action)
+            return ActionResponse(success=True, summary="published")
+
+        registry.register("execute_task", handler)
+        task = Task(
+            title="publish post",
+            id="task-1",
+            required_level="publish",
+        )
+
+        with patch("core.executor.load_actions", return_value=[]), \
+             patch("core.executor.save_actions"), \
+             patch("core.executor.load_results", return_value=[]), \
+             patch("core.executor.save_results"), \
+             patch("core.executor.verify_execution_result"):
+            execute_task(task, registry=registry)
+
+        self.assertEqual(seen[0].permission_level, "publish")
 
     def test_failed_handler_response_produces_failed_task_and_result(self):
         registry = ActionRegistry()
