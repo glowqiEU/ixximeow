@@ -1,10 +1,10 @@
 from collections.abc import Callable
-from typing import Any
 
 from .action import Action
+from .action_response import ActionResponse
 
 
-ActionHandler = Callable[[Action], Any]
+ActionHandler = Callable[[Action], ActionResponse]
 
 
 class ActionRegistry:
@@ -26,5 +26,5 @@ class ActionRegistry:
         except KeyError as exc:
             raise ValueError(f"action not registered: {name}") from exc
 
-    def execute(self, action: Action) -> Any:
+    def execute(self, action: Action) -> ActionResponse:
         return self.get(action.name)(action)
