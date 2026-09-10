@@ -59,6 +59,7 @@ def execute_task(
         task_id=task.id,
         name=TASK_ACTION_NAME,
         input={"title": task.title},
+        permission_level=task.required_level,
     )
     execution_id = str(uuid4())
 
