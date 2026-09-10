@@ -3,12 +3,12 @@ from typing import Optional
 from .action import Action
 from .action_registry import ActionRegistry
 from .evidence import Evidence
-from .evidence_store import upsert_evidence
+from .evidence_store import find_evidence_by_result_id, upsert_evidence
 from .execution import Execution
 from .execution_store import find_execution_by_id, upsert_execution
 from .models import Result
 from .reconciliation import Reconciliation
-from .result_store import upsert_result
+from .result_store import find_result_by_execution_id, upsert_result
 
 
 def _build_evidence(
@@ -129,28 +129,47 @@ def recover_uncertain_execution(
             f"invalid reconciliation status: {reconciliation.status}"
         )
 
-    execution.transition("succeeded")
-    result = Result(
-        task_id=action.task_id,
-        action_id=action.id,
-        execution_id=execution.id,
-        success=True,
-        summary=f"execution recovered: {reconciliation.summary}",
-    )
-    evidence = [
-        Evidence(
-            result_id=result.id,
+    result = find_result_by_execution_id(execution.id)
+    if result is None:
+        result = Result(
+            task_id=action.task_id,
+            action_id=action.id,
             execution_id=execution.id,
-            kind="verification",
-            claim="execution_reconciled",
-            value=True,
-            content=reconciliation.summary,
-            source=reconciliation.source,
-            verified=True,
+            success=True,
+            summary=f"execution recovered: {reconciliation.summary}",
         )
-    ]
-    upsert_execution(execution)
+    else:
+        if result.task_id != action.task_id or result.action_id != action.id:
+            raise ValueError("existing recovery result does not match execution")
+        if not result.success:
+            raise ValueError("existing recovery result is not successful")
+
+    evidence = find_evidence_by_result_id(result.id)
+    if not evidence:
+        evidence = [
+            Evidence(
+                result_id=result.id,
+                execution_id=execution.id,
+                kind="verification",
+                claim="execution_reconciled",
+                value=True,
+                content=reconciliation.summary,
+                source=reconciliation.source,
+                verified=True,
+            )
+        ]
+    else:
+        for item in evidence:
+            if item.execution_id != execution.id or item.result_id != result.id:
+                raise ValueError("existing recovery evidence does not match artifacts")
+
+    # Persist dependent artifacts while the durable execution is still uncertain.
+    # If the final execution write fails, a later recovery can reuse these artifacts
+    # instead of producing duplicate results/evidence.
     upsert_result(result)
     for item in evidence:
         upsert_evidence(item)
+
+    execution.transition("succeeded")
+    upsert_execution(execution)
     return execution, result, evidence
