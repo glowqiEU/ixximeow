@@ -55,6 +55,16 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
             approval_id=approval.id,
             id=task.id,
         )
+        running_task = Task(
+            "publish",
+            status="running",
+            decision_id=decision.id,
+            goal_id=decision.goal_id,
+            action_id=task.action_id,
+            approval_id=approval.id,
+            required_level=task.required_level,
+            id=task.id,
+        )
         result = Result(
             task_id=task.id,
             action_id=task.action_id,
@@ -68,6 +78,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
              patch("core.orchestrator.load_decisions", return_value=[decision]), \
              patch("core.orchestrator.find_action_by_id", return_value=action), \
              patch("core.orchestrator.reserve_execution", return_value=execution) as reserve, \
+             patch("core.orchestrator.claim_task_running", return_value=running_task) as claim, \
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.save_approvals"), \
              patch("core.orchestrator.load_state", return_value=SystemState()), \
@@ -83,6 +94,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         self.assertEqual(resumed_task.status, "completed")
         self.assertEqual(resumed_result.task_id, task.id)
         reserve.assert_called_once_with(action)
+        claim.assert_called_once_with(task.id, approval.id)
         finalize.assert_called_once()
         action_arg = finalize.call_args.args[2]
         execution_arg = finalize.call_args.args[3]
