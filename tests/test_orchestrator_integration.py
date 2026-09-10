@@ -43,39 +43,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
             ],
         )
 
-    def _patches(self, context, decision, state, execute_result, check_approval):
-        return [
-            patch("core.orchestrator_v2.build_context", return_value=context),
-            patch("core.orchestrator_v2.generate_candidates", return_value=[decision]),
-            patch(
-                "core.orchestrator_v2.evaluate_decision",
-                return_value=DecisionEvaluation(
-                    decision_id=decision.id,
-                    relevance=1.0,
-                    confidence=1.0,
-                    risk=0.0,
-                    effort=0.0,
-                    reason="strong candidate",
-                ),
-            ),
-            patch("core.orchestrator_v2.select_decision", return_value=decision),
-            patch("core.orchestrator_v2.load_decisions", return_value=[]),
-            patch("core.orchestrator_v2.save_decisions"),
-            patch("core.orchestrator_v2.load_plans", return_value=[]),
-            patch("core.orchestrator_v2.save_plans"),
-            patch("core.orchestrator_v2.load_tasks", return_value=[]),
-            patch("core.orchestrator_v2.save_tasks"),
-            patch("core.orchestrator_v2.load_state", return_value=state),
-            patch("core.orchestrator_v2.save_state"),
-            patch("core.orchestrator_v2.check_approval", side_effect=check_approval),
-            patch("core.orchestrator_v2.execute_action", return_value=execute_result),
-            patch("core.orchestrator_v2.upsert_evidence"),
-            patch("core.orchestrator_v2.upsert_outcome"),
-            patch("core.orchestrator_v2.append_event"),
-            patch("core.orchestrator_v2.apply_decision", return_value=state),
-            patch("core.orchestrator_v2.apply_result", return_value=state),
-        ]
-
     def _execute_with_evidence(self, action, claim, value, content):
         execution = Execution(action_id=action.id, task_id=action.task_id)
         execution.transition("running")
@@ -98,17 +65,71 @@ class TestOrchestratorIntegration(unittest.TestCase):
         )
         return execution, result, [evidence]
 
+    def _common_patches(self, context, decision, state):
+        return [
+            patch("core.orchestrator_v2.build_context", return_value=context),
+            patch("core.orchestrator_v2.generate_candidates", return_value=[decision]),
+            patch(
+                "core.orchestrator_v2.evaluate_decision",
+                return_value=DecisionEvaluation(
+                    decision_id=decision.id,
+                    relevance=1.0,
+                    confidence=1.0,
+                    risk=0.0,
+                    effort=0.0,
+                    reason="strong candidate",
+                ),
+            ),
+            patch("core.orchestrator_v2.select_decision", return_value=decision),
+            patch("core.orchestrator_v2.load_decisions", return_value=[]),
+            patch("core.orchestrator_v2.save_decisions"),
+            patch("core.orchestrator_v2.load_plans", return_value=[]),
+            patch("core.orchestrator_v2.save_plans"),
+            patch("core.orchestrator_v2.load_tasks", return_value=[]),
+            patch("core.orchestrator_v2.save_tasks"),
+            patch("core.orchestrator_v2.load_state", return_value=state),
+            patch("core.orchestrator_v2.check_approval", return_value=None),
+            patch("core.orchestrator_v2.upsert_evidence"),
+            patch("core.orchestrator_v2.upsert_outcome"),
+            patch("core.orchestrator_v2.append_event"),
+            patch("core.orchestrator_v2.apply_decision", return_value=state),
+            patch("core.orchestrator_v2.apply_result", return_value=state),
+        ]
+
     def test_full_lifecycle_resolves_achieved_from_evidence(self):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
+        execution_holder = Execution(action_id="pending", task_id="pending")
 
-        def execute_result(action, registry):
-            return self._execute_with_evidence(
-                action, "post_published", True, "the post was published"
+        def reserve_result(action):
+            execution_holder.action_id = action.id
+            execution_holder.task_id = action.task_id
+            return execution_holder
+
+        def execute_result(action, execution, registry):
+            execution.status = "succeeded"
+            execution.attempt = 1
+            result = Result(
+                task_id=action.task_id,
+                action_id=action.id,
+                execution_id=execution.id,
+                success=True,
+                summary="published",
             )
+            evidence = Evidence(
+                result_id=result.id,
+                execution_id=execution.id,
+                kind="execution_output",
+                claim="post_published",
+                value=True,
+                content="the post was published",
+                verified=True,
+            )
+            return execution, result, [evidence]
 
-        with patch("core.orchestrator_v2.execute_action", side_effect=execute_result), \
+        with patch("core.orchestrator_v2.reserve_execution", side_effect=reserve_result), \
+             patch("core.orchestrator_v2.execute_reserved_action", side_effect=execute_result), \
              patch("core.orchestrator_v2.build_context", return_value=context), \
              patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
              patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
@@ -141,13 +162,36 @@ class TestOrchestratorIntegration(unittest.TestCase):
         context = AgentContext(goal_id="goal-1", task=None)
         decision = self._decision()
         state = SystemState(active_goal_id="goal-1")
+        execution_holder = Execution(action_id="pending", task_id="pending")
 
-        def execute_without_objective_evidence(action, registry):
-            return self._execute_with_evidence(
-                action, "execution_succeeded", True, "handler completed"
+        def reserve_result(action):
+            execution_holder.action_id = action.id
+            execution_holder.task_id = action.task_id
+            return execution_holder
+
+        def execute_without_objective_evidence(action, execution, registry):
+            execution.status = "succeeded"
+            execution.attempt = 1
+            result = Result(
+                task_id=action.task_id,
+                action_id=action.id,
+                execution_id=execution.id,
+                success=True,
+                summary="published",
             )
+            evidence = Evidence(
+                result_id=result.id,
+                execution_id=execution.id,
+                kind="execution_output",
+                claim="execution_succeeded",
+                value=True,
+                content="handler completed",
+                verified=True,
+            )
+            return execution, result, [evidence]
 
-        with patch("core.orchestrator_v2.execute_action", side_effect=execute_without_objective_evidence), \
+        with patch("core.orchestrator_v2.reserve_execution", side_effect=reserve_result), \
+             patch("core.orchestrator_v2.execute_reserved_action", side_effect=execute_without_objective_evidence), \
              patch("core.orchestrator_v2.build_context", return_value=context), \
              patch("core.orchestrator_v2.generate_candidates", return_value=[decision]), \
              patch("core.orchestrator_v2.evaluate_decision", return_value=DecisionEvaluation(
