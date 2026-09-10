@@ -27,4 +27,7 @@ class ActionRegistry:
             raise ValueError(f"action not registered: {name}") from exc
 
     def execute(self, action: Action) -> ActionResponse:
-        return self.get(action.name)(action)
+        response = self.get(action.name)(action)
+        if not isinstance(response, ActionResponse):
+            raise TypeError("action handler must return ActionResponse")
+        return response
