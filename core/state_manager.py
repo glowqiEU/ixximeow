@@ -33,6 +33,19 @@ def apply_result(
     return _touch(state)
 
 
+def apply_uncertain_execution(
+    state: SystemState,
+    task: Task,
+) -> SystemState:
+    """Clear active work when execution needs reconciliation before a result exists."""
+    if state.active_task != task.id:
+        raise ValueError("uncertain execution does not belong to active task")
+
+    state.active_task = None
+    state.last_result_id = None
+    return _touch(state)
+
+
 def apply_cancellation(
     state: SystemState,
     task: Task,
