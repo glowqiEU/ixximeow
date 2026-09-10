@@ -8,7 +8,9 @@ from core.action_registry import ActionRegistry
 from core.execution import Execution
 from core.execution_service import execute_action, recover_uncertain_execution
 from core.execution_store import load_executions, upsert_execution
+from core.evidence_store import find_evidence_by_result_id
 from core.reconciliation import Reconciliation
+from core.result_store import find_result_by_execution_id
 
 
 class TestExecutionService(unittest.TestCase):
@@ -178,6 +180,51 @@ class TestExecutionService(unittest.TestCase):
                 self.assertEqual(len(evidence), 1)
                 self.assertEqual(evidence[0].source, "platform-api")
                 self.assertEqual(calls, [])
+            finally:
+                self._restore_stores(stores, original)
+
+    def test_recovery_resumes_after_final_execution_persistence_failure(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution = self._uncertain_execution(action)
+                upsert_execution(execution)
+                reconciliation = Reconciliation(
+                    status="already_succeeded",
+                    summary="remote post already exists",
+                    source="platform-api",
+                )
+
+                with patch(
+                    "core.execution_service.upsert_execution",
+                    side_effect=RuntimeError("execution persistence failure"),
+                ):
+                    with self.assertRaises(RuntimeError):
+                        recover_uncertain_execution(
+                            execution.id,
+                            action,
+                            lambda current_action: reconciliation,
+                        )
+
+                persisted_execution = load_executions()[0]
+                self.assertEqual(persisted_execution.status, "uncertain")
+                persisted_result = find_result_by_execution_id(execution.id)
+                self.assertIsNotNone(persisted_result)
+                persisted_evidence = find_evidence_by_result_id(persisted_result.id)
+                self.assertEqual(len(persisted_evidence), 1)
+
+                recovered, result, evidence = recover_uncertain_execution(
+                    execution.id,
+                    action,
+                    lambda current_action: reconciliation,
+                )
+
+                self.assertEqual(recovered.status, "succeeded")
+                self.assertEqual(result.id, persisted_result.id)
+                self.assertEqual(evidence[0].id, persisted_evidence[0].id)
+                self.assertEqual(len(find_evidence_by_result_id(result.id)), 1)
             finally:
                 self._restore_stores(stores, original)
 
