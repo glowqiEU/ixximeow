@@ -56,6 +56,7 @@ class Result:
     summary: str
     action_id: Optional[str] = None
     execution_id: Optional[str] = None
+    failure_kind: Optional[str] = None
     id: str = field(default_factory=new_id)
     created_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -68,3 +69,14 @@ class Result:
             raise ValueError("result action_id cannot be empty")
         if self.execution_id is not None and not self.execution_id.strip():
             raise ValueError("result execution_id cannot be empty")
+
+        allowed_failure_kinds = {
+            "action_failed",
+            "execution_error",
+            "dispatch_error",
+            "contract_error",
+        }
+        if self.failure_kind is not None and self.failure_kind not in allowed_failure_kinds:
+            raise ValueError(f"invalid result failure_kind: {self.failure_kind}")
+        if self.success and self.failure_kind is not None:
+            raise ValueError("successful result cannot have a failure_kind")
