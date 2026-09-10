@@ -10,6 +10,7 @@ from core.state_store import load_state
 from core.history_store import load_events
 from core.task_store import load_tasks
 from core.plan_store import load_plans
+from core.action_store import load_actions
 from core.permissions import AutonomyLevel
 from core.memory import Memory
 from core.models import Decision, Result, Task
@@ -34,6 +35,11 @@ class TestOrchestratorIntegration(unittest.TestCase):
         self.assertEqual(result.task_id, task.id)
         self.assertEqual(task.status, "completed")
         self.assertTrue(result.success)
+
+        actions = load_actions()
+        persisted_action = next(item for item in actions if item.id == result.action_id)
+        self.assertEqual(persisted_action.task_id, task.id)
+        self.assertEqual(persisted_action.name, task.title)
 
         plans = load_plans()
         persisted_plan = next(item for item in plans if item.id == task.plan_id)
