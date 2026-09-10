@@ -30,34 +30,6 @@ class TestArtifactPersistenceConcurrency(unittest.TestCase):
                     for index in range(2)
                 ]
 
-                with ThreadPoolExecutor(max_workers=2) as pool:
-                    outcomes = list(pool.map(upsert_result, results))
-
-                persisted = find_result_by_execution_id("execution-1")
-                self.assertIsNotNone(persisted)
-                self.assertEqual(
-                    sum(outcome is None for outcome in outcomes), 1
-                )
-            except Exception:
-                pass
-            finally:
-                result_store.RESULTS_FILE = original
-
-            # Re-run with explicit outcome capture so one conflict is observable.
-            result_store.RESULTS_FILE = root / "results.json"
-            try:
-                results = [
-                    Result(
-                        task_id="task-1",
-                        action_id="action-1",
-                        execution_id="execution-2",
-                        success=True,
-                        summary=f"result-{index}",
-                        id=f"result-2-{index}",
-                    )
-                    for index in range(2)
-                ]
-
                 def attempt(result):
                     try:
                         upsert_result(result)
@@ -69,7 +41,8 @@ class TestArtifactPersistenceConcurrency(unittest.TestCase):
                     outcomes = list(pool.map(attempt, results))
 
                 self.assertEqual(sorted(outcomes), ["accepted", "rejected"])
-                self.assertIsNotNone(find_result_by_execution_id("execution-2"))
+                persisted = find_result_by_execution_id("execution-1")
+                self.assertIsNotNone(persisted)
             finally:
                 result_store.RESULTS_FILE = original
 
