@@ -96,6 +96,16 @@ def _technical_result(
     return execution, result, evidence
 
 
+def _persist_technical_artifacts(
+    result: Result,
+    evidence: list[Evidence],
+) -> None:
+    """Persist artifacts before marking the execution terminal."""
+    upsert_result(result)
+    for item in evidence:
+        upsert_evidence(item)
+
+
 def execute_reserved_action(
     action: Action,
     execution: Execution,
@@ -149,10 +159,8 @@ def execute_reserved_action(
             output=disposition.output,
         )
 
+    _persist_technical_artifacts(result, evidence)
     upsert_execution(execution)
-    upsert_result(result)
-    for item in evidence:
-        upsert_evidence(item)
     return execution, result, evidence
 
 
