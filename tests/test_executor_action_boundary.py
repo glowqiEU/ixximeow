@@ -25,7 +25,8 @@ class TestExecutorActionBoundary(unittest.TestCase):
         registry.register("execute_task", handler)
         task = Task(title="create post", id="task-1")
 
-        with patch("core.executor.load_actions", return_value=[]), \
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
+             patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results"), \
@@ -67,6 +68,7 @@ class TestExecutorActionBoundary(unittest.TestCase):
         )
 
         with patch("core.executor.load_approvals", return_value=[approval]), \
+             patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
              patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
@@ -123,6 +125,7 @@ class TestExecutorActionBoundary(unittest.TestCase):
         )
 
         with patch("core.executor.load_approvals", return_value=[]), \
+             patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
              patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.load_results"), \
              patch("core.executor.save_results"):
@@ -146,7 +149,8 @@ class TestExecutorActionBoundary(unittest.TestCase):
         )
         task = Task(title="create post", id="task-1")
 
-        with patch("core.executor.load_actions", return_value=[]), \
+        with patch("core.agent_config.CURRENT_AUTONOMY_LEVEL", 3), \
+             patch("core.executor.load_actions", return_value=[]), \
              patch("core.executor.save_actions"), \
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results"), \
