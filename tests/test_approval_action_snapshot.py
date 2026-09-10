@@ -48,6 +48,15 @@ class TestApprovalActionSnapshot(unittest.TestCase):
         orchestrator = Orchestrator(ActionRegistry())
         task, original_action, approval, mutated_decision = self._base_fixture()
         mutated_decision.action = "delete_post"
+        running_task = Task(
+            title=task.title,
+            status="running",
+            decision_id=task.decision_id,
+            action_id=task.action_id,
+            approval_id=task.approval_id,
+            required_level=task.required_level,
+            id=task.id,
+        )
 
         captured = {}
 
@@ -62,7 +71,7 @@ class TestApprovalActionSnapshot(unittest.TestCase):
             stack.enter_context(patch("core.orchestrator.load_tasks", return_value=[task]))
             stack.enter_context(patch("core.orchestrator.load_decisions", return_value=[mutated_decision]))
             stack.enter_context(patch("core.orchestrator.find_action_by_id", return_value=original_action))
-            stack.enter_context(patch("core.orchestrator.transition_task", side_effect=lambda item, status: item))
+            stack.enter_context(patch("core.orchestrator.claim_task_running", return_value=running_task))
             stack.enter_context(patch("core.orchestrator.save_tasks"))
             stack.enter_context(patch("core.orchestrator.save_approvals"))
             stack.enter_context(patch("core.orchestrator.reserve_execution", return_value=object()))
