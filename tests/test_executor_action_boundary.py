@@ -1,8 +1,10 @@
 import unittest
 from unittest.mock import patch
 
+from core.action import Action
 from core.action_registry import ActionRegistry
 from core.action_response import ActionResponse
+from core.approval import Approval
 from core.executor import execute_task
 from core.models import Task
 
@@ -41,7 +43,7 @@ class TestExecutorActionBoundary(unittest.TestCase):
         self.assertEqual(result.action_id, seen[0].id)
         self.assertTrue(result.execution_id)
 
-    def test_executor_preserves_task_required_permission_on_action(self):
+    def test_executor_preserves_task_required_permission_on_action_after_approval(self):
         registry = ActionRegistry()
         seen = []
 
@@ -53,7 +55,15 @@ class TestExecutorActionBoundary(unittest.TestCase):
         task = Task(
             title="publish post",
             id="task-1",
+            approval_id="approval-1",
             required_level="publish",
+        )
+        approval = Approval(
+            task_id="task-1",
+            required_level="publish",
+            reason="publishing requires approval",
+            status="approved",
+            id="approval-1",
         )
 
         with patch("core.executor.load_actions", return_value=[]), \
@@ -61,9 +71,37 @@ class TestExecutorActionBoundary(unittest.TestCase):
              patch("core.executor.load_results", return_value=[]), \
              patch("core.executor.save_results"), \
              patch("core.executor.verify_execution_result"):
-            execute_task(task, registry=registry)
+            execute_task(task, approval=approval, registry=registry)
 
         self.assertEqual(seen[0].permission_level, "publish")
+
+    def test_executor_rejects_higher_permission_without_approval(self):
+        registry = ActionRegistry()
+        seen = []
+
+        def handler(action):
+            seen.append(action)
+            return ActionResponse(success=True, summary="should not run")
+
+        registry.register("execute_task", handler)
+        task = Task(
+            title="publish post",
+            id="task-1",
+            required_level="publish",
+        )
+
+        with patch("core.executor.load_actions", return_value=[]), \
+             patch("core.executor.save_actions"), \
+             patch("core.executor.load_results"), \
+             patch("core.executor.save_results"):
+            with self.assertRaises(PermissionError):
+                execute_task(task, registry=registry)
+
+        self.assertEqual(seen, [])
+
+    def test_action_permission_level_is_validated(self):
+        with self.assertRaises(ValueError):
+            Action(task_id="task-1", name="execute_task", permission_level="invalid")
 
     def test_failed_handler_response_produces_failed_task_and_result(self):
         registry = ActionRegistry()
