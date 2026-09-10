@@ -256,6 +256,53 @@ class TestExecutionService(unittest.TestCase):
             finally:
                 self._restore_stores(stores, original)
 
+    def test_partial_evidence_persistence_does_not_commit_terminal_execution(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            registry.register(
+                "publish_post",
+                lambda action: {
+                    "summary": "published",
+                    "evidence": [
+                        {
+                            "claim": "post_published",
+                            "kind": "execution_output",
+                            "value": True,
+                            "content": "the post was published",
+                            "verified": True,
+                        }
+                    ],
+                },
+            )
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            calls = []
+
+            def persist_evidence(item):
+                calls.append(item.claim)
+                if len(calls) == 2:
+                    raise RuntimeError("second evidence persistence failure")
+
+            try:
+                with patch(
+                    "core.execution_service.upsert_evidence",
+                    side_effect=persist_evidence,
+                ):
+                    with self.assertRaises(RuntimeError):
+                        execute_action(action, registry)
+
+                execution = load_executions()[0]
+                self.assertEqual(execution.status, "running")
+                result = find_result_by_execution_id(execution.id)
+                self.assertIsNotNone(result)
+                persisted_evidence = find_evidence_by_result_id(result.id)
+                self.assertEqual(len(persisted_evidence), 1)
+                self.assertEqual(persisted_evidence[0].claim, "execution_succeeded")
+                self.assertEqual(calls, ["execution_succeeded", "post_published"])
+            finally:
+                self._restore_stores(stores, original)
+
     def test_invalid_technical_artifact_is_rejected_before_persistence(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
