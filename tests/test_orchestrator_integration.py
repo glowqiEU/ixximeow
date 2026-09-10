@@ -89,7 +89,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
             patch("core.orchestrator_v2.save_tasks"),
             patch("core.orchestrator_v2.load_state", return_value=state),
             patch("core.orchestrator_v2.check_approval", return_value=None),
-            patch("core.orchestrator_v2.upsert_evidence"),
             patch("core.orchestrator_v2.upsert_outcome"),
             patch("core.orchestrator_v2.append_event"),
             patch("core.orchestrator_v2.apply_decision", return_value=state),
@@ -145,7 +144,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator_v2.save_tasks"), \
              patch("core.orchestrator_v2.load_state", return_value=state), \
              patch("core.orchestrator_v2.check_approval", return_value=None), \
-             patch("core.orchestrator_v2.upsert_evidence"), \
              patch("core.orchestrator_v2.upsert_outcome"), \
              patch("core.orchestrator_v2.append_event"), \
              patch("core.orchestrator_v2.apply_decision", return_value=state), \
@@ -207,7 +205,6 @@ class TestOrchestratorIntegration(unittest.TestCase):
              patch("core.orchestrator_v2.save_tasks"), \
              patch("core.orchestrator_v2.load_state", return_value=state), \
              patch("core.orchestrator_v2.check_approval", return_value=None), \
-             patch("core.orchestrator_v2.upsert_evidence"), \
              patch("core.orchestrator_v2.upsert_outcome"), \
              patch("core.orchestrator_v2.append_event"), \
              patch("core.orchestrator_v2.apply_decision", return_value=state), \
