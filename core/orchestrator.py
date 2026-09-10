@@ -9,6 +9,7 @@ from .history_store import append_event
 from .orchestrator_v2 import OrchestratorV2
 from .state_manager import apply_cancellation
 from .state_store import load_state, save_state
+from .task_lifecycle import transition_task
 from .task_store import claim_task_running, load_tasks, save_tasks
 
 
