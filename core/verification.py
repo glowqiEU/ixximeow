@@ -7,16 +7,19 @@ from .objective import Objective
 from .outcome import Outcome
 
 
-def verify_execution_result(task: Task, action: Action, execution: Execution, result: Result) -> None:
-    """Validate that a technical result belongs to one execution lineage."""
-    if action.task_id != task.id:
-        raise ValueError("action does not belong to task")
-    if execution.task_id != task.id:
-        raise ValueError("execution does not belong to task")
+def verify_technical_artifacts(
+    action: Action,
+    execution: Execution,
+    result: Result,
+    evidence: list[Evidence],
+) -> None:
+    """Validate technical artifact lineage before persistence."""
+    if execution.task_id != action.task_id:
+        raise ValueError("execution does not belong to action task")
     if execution.action_id != action.id:
         raise ValueError("execution does not belong to action")
-    if result.task_id != task.id:
-        raise ValueError("result does not belong to task")
+    if result.task_id != action.task_id:
+        raise ValueError("result does not belong to action task")
     if result.action_id != action.id:
         raise ValueError("result does not belong to action")
     if result.execution_id != execution.id:
@@ -36,6 +39,20 @@ def verify_execution_result(task: Task, action: Action, execution: Execution, re
         raise ValueError(
             f"execution status cannot be verified with a final result: {execution.status}"
         )
+
+    for item in evidence:
+        verify_evidence(result, execution, item)
+
+
+def verify_execution_result(task: Task, action: Action, execution: Execution, result: Result) -> None:
+    """Validate that a technical result belongs to one execution lineage."""
+    if action.task_id != task.id:
+        raise ValueError("action does not belong to task")
+    verify_technical_artifacts(action, execution, result, [])
+    if execution.task_id != task.id:
+        raise ValueError("execution does not belong to task")
+    if result.task_id != task.id:
+        raise ValueError("result does not belong to task")
 
 
 def verify_evidence(result: Result, execution: Execution, evidence: Evidence) -> None:
