@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from core.action import Action
 from core.action_registry import ActionRegistry
 from core.approval import Approval
 from core.models import Decision, Result, Task
@@ -32,6 +33,12 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
             status="approved",
             id="approval-1",
         )
+        action = Action(
+            id=task.action_id,
+            task_id=task.id,
+            name="publish",
+            permission_level="publish",
+        )
         completed_task = Task(
             "publish",
             status="completed",
@@ -52,6 +59,7 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         with patch("core.orchestrator.load_approvals", return_value=[approval]), \
              patch("core.orchestrator.load_tasks", return_value=[task]), \
              patch("core.orchestrator.load_decisions", return_value=[decision]), \
+             patch("core.orchestrator.find_action_by_id", return_value=action), \
              patch("core.orchestrator.save_tasks"), \
              patch("core.orchestrator.save_approvals"), \
              patch("core.orchestrator.load_state", return_value=SystemState()), \
@@ -67,9 +75,11 @@ class TestOrchestratorApprovalLifecycle(unittest.TestCase):
         self.assertEqual(resumed_task.status, "completed")
         self.assertEqual(resumed_result.task_id, task.id)
         finalize.assert_called_once()
-        action = finalize.call_args.args[2]
-        self.assertEqual(action.id, task.action_id)
-        self.assertEqual(action.task_id, task.id)
+        action_arg = finalize.call_args.args[2]
+        self.assertEqual(action_arg.id, task.action_id)
+        self.assertEqual(action_arg.task_id, task.id)
+        self.assertEqual(action_arg.name, action.name)
+        self.assertEqual(action_arg.permission_level, action.permission_level)
 
     def test_rejected_approval_cancels_without_execution(self):
         approval = Approval(
