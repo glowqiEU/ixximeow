@@ -44,8 +44,8 @@ class OrchestratorV2:
 
         objective = build_objective(decision, task.id)
         outcome = resolve_outcome(decision, task, objective, [result], evidence)
-        upsert_outcome(outcome)
         verify_outcome(decision, task, objective, [result], evidence, outcome)
+        upsert_outcome(outcome)
 
         if outcome.status == "achieved":
             task = transition_task(task, "completed")
