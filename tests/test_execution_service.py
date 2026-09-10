@@ -6,6 +6,7 @@ from unittest.mock import patch
 from core.action import Action
 from core.action_registry import ActionRegistry
 from core.execution import Execution
+from core.execution_disposition import ExecutionDisposition
 from core.execution_service import (
     execute_action,
     execute_reserved_action,
@@ -119,6 +120,36 @@ class TestExecutionService(unittest.TestCase):
             self.assertEqual(execution.status, "failed")
             self.assertFalse(result.success)
             self.assertEqual(evidence[0].value, False)
+
+    def test_explicit_uncertain_disposition_does_not_create_false_result(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = ActionRegistry()
+            calls = []
+
+            def handler(action):
+                calls.append(action.id)
+                return ExecutionDisposition(
+                    status="uncertain",
+                    summary="remote acknowledgement was not received",
+                )
+
+            registry.register("publish_post", handler)
+            action = Action(task_id="task-1", name="publish_post", id="action-1")
+            stores, original = self._patch_stores(root)
+            try:
+                execution, result, evidence = execute_action(action, registry)
+                persisted = load_executions()
+            finally:
+                self._restore_stores(stores, original)
+
+            self.assertEqual(execution.status, "uncertain")
+            self.assertEqual(execution.attempt, 1)
+            self.assertIsNone(result)
+            self.assertEqual(evidence, [])
+            self.assertEqual(persisted[0].status, "uncertain")
+            self.assertEqual(calls, [action.id])
+            self.assertIsNone(find_result_by_execution_id(execution.id))
 
     def test_duplicate_action_is_rejected_before_handler_runs(self):
         with TemporaryDirectory() as directory:
