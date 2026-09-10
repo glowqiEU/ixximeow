@@ -5,7 +5,13 @@ from .action_registry import ActionRegistry
 from .evidence import Evidence
 from .evidence_store import find_evidence_by_result_id, upsert_evidence
 from .execution import Execution
-from .execution_store import find_execution_by_id, find_execution_by_idempotency_key, upsert_execution
+from .execution_store import (
+    claim_execution_running,
+    find_execution_by_id,
+    find_execution_by_idempotency_key,
+    reserve_execution_slot,
+    upsert_execution,
+)
 from .models import Result
 from .reconciliation import Reconciliation
 from .result_store import find_result_by_execution_id, upsert_result
@@ -68,8 +74,7 @@ def reserve_execution(action: Action) -> Execution:
         task_id=action.task_id,
         idempotency_key=action.id,
     )
-    upsert_execution(execution)
-    return execution
+    return reserve_execution_slot(execution)
 
 
 def execute_reserved_action(
@@ -77,16 +82,13 @@ def execute_reserved_action(
     execution: Execution,
     registry: ActionRegistry,
 ) -> tuple[Execution, Result, list[Evidence]]:
-    """Start a pending execution and produce its technical artifacts."""
+    """Claim a pending execution and produce its technical artifacts."""
     if execution.action_id != action.id:
         raise ValueError("execution does not belong to action")
     if execution.task_id != action.task_id:
         raise ValueError("execution does not belong to task")
-    if execution.status != "pending":
-        raise ValueError(f"execution is not pending: {execution.status}")
 
-    execution.transition("running")
-    upsert_execution(execution)
+    execution = claim_execution_running(execution.id)
 
     try:
         output = registry.execute(action)
