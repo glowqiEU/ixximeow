@@ -9,6 +9,7 @@ from .action_registry import (
 )
 from .action_response import ActionResponse
 from .approval import Approval
+from .approval_store import load_approvals
 from .agent_config import CURRENT_AUTONOMY_LEVEL
 from .models import Task, Result
 from .permissions import AutonomyLevel, can_execute
@@ -51,6 +52,22 @@ def _ensure_execution_permission(task: Task, approval: Optional[Approval]) -> No
         raise PermissionError(
             f"task requires approved {task.required_level} autonomy level"
         )
+
+    persisted = next(
+        (item for item in load_approvals() if item.id == approval.id),
+        None,
+    )
+    if persisted is None:
+        raise PermissionError("approval is not persisted")
+
+    if persisted.task_id != task.id:
+        raise PermissionError("persisted approval does not belong to task")
+
+    if persisted.required_level != task.required_level:
+        raise PermissionError("persisted approval does not match task permission")
+
+    if persisted.status != "approved":
+        raise PermissionError("persisted approval is not approved")
 
 
 def execute_task(
