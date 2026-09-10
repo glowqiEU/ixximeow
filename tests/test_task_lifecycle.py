@@ -86,12 +86,11 @@ class TestTaskLifecycle(unittest.TestCase):
         with self.assertRaises(ValueError):
             transition_task(task, "uncertain")
 
-    def test_failed_to_pending_for_retry(self):
+    def test_failed_is_terminal_until_retry_contract_exists(self):
         task = Task(title="test", status="failed")
 
-        transition_task(task, "pending")
-
-        self.assertEqual(task.status, "pending")
+        with self.assertRaises(ValueError):
+            transition_task(task, "pending")
 
     def test_pending_to_cancelled(self):
         task = Task(title="test")
