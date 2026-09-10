@@ -2,6 +2,8 @@ from typing import Optional
 from uuid import uuid4
 
 from .action import Action
+from .action_registry import ActionRegistry
+from .action_response import ActionResponse
 from .approval import Approval
 from .models import Task, Result
 from .task_lifecycle import transition_task
@@ -10,9 +12,28 @@ from .result_store import load_results, save_results
 from .verification import verify_execution_result
 
 
+TASK_ACTION_NAME = "execute_task"
+
+
+def _default_task_handler(action: Action) -> ActionResponse:
+    """Temporary deterministic handler for the MVP task execution boundary."""
+    return ActionResponse(
+        success=True,
+        summary="task execution completed",
+        output={"task_id": action.task_id, "title": action.input["title"]},
+    )
+
+
+def _default_registry() -> ActionRegistry:
+    registry = ActionRegistry()
+    registry.register(TASK_ACTION_NAME, _default_task_handler)
+    return registry
+
+
 def execute_task(
     task: Task,
     approval: Optional[Approval] = None,
+    registry: Optional[ActionRegistry] = None,
 ) -> tuple[Task, Optional[Result]]:
     if approval is not None:
         if task.approval_id != approval.id:
@@ -30,7 +51,11 @@ def execute_task(
             raise ValueError(f"invalid approval status: {approval.status}")
 
     task = transition_task(task, "running")
-    action = Action(task_id=task.id, name=task.title)
+    action = Action(
+        task_id=task.id,
+        name=TASK_ACTION_NAME,
+        input={"title": task.title},
+    )
     execution_id = str(uuid4())
 
     actions = load_actions()
@@ -38,16 +63,20 @@ def execute_task(
     save_actions(actions)
 
     try:
+        active_registry = registry or _default_registry()
+        response = active_registry.execute(action)
         result = Result(
             task_id=task.id,
             action_id=action.id,
             execution_id=execution_id,
-            success=True,
-            summary="task execution completed",
+            success=response.success,
+            summary=response.summary,
         )
         verify_execution_result(task, result)
-        task = transition_task(task, "completed")
-
+        task = transition_task(
+            task,
+            "completed" if response.success else "failed",
+        )
     except Exception as exc:
         result = Result(
             task_id=task.id,
