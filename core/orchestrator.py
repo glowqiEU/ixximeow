@@ -1,5 +1,6 @@
 from .action import Action
 from .action_registry import ActionRegistry
+from .action_store import find_action_by_id
 from .approval_store import load_approvals, save_approvals
 from .decision_store import load_decisions
 from .history import HistoryEvent
@@ -62,12 +63,16 @@ class Orchestrator(OrchestratorV2):
         if task.action_id is None:
             raise ValueError("approved task has no action_id")
 
-        action = Action(
-            id=task.action_id,
-            task_id=task.id,
-            name=decision.action,
-            permission_level=task.required_level,
-        )
+        action = find_action_by_id(task.action_id)
+        if action is None:
+            raise ValueError("approved action definition not found")
+        if action.task_id != task.id:
+            raise ValueError("approved action does not belong to task")
+        if action.id != approval.action_id:
+            raise ValueError("approved action does not match approval")
+        if action.permission_level != approval.required_level:
+            raise ValueError("approved action permission level does not match approval")
+
         task = transition_task(task, "running")
         index = next(index for index, item in enumerate(tasks) if item.id == task.id)
         tasks[index] = task
