@@ -9,8 +9,7 @@ from .history_store import append_event
 from .orchestrator_v2 import OrchestratorV2
 from .state_manager import apply_cancellation
 from .state_store import load_state, save_state
-from .task_lifecycle import transition_task
-from .task_store import load_tasks, save_tasks
+from .task_store import claim_task_running, load_tasks, save_tasks
 
 
 class Orchestrator(OrchestratorV2):
@@ -77,9 +76,7 @@ class Orchestrator(OrchestratorV2):
             raise ValueError("approved action definition changed after approval")
 
         execution = reserve_execution(action)
-        task = transition_task(task, "running")
-        index = next(index for index, item in enumerate(tasks) if item.id == task.id)
-        tasks[index] = task
-        save_tasks(tasks)
+        task = claim_task_running(task.id, approval.id)
+        tasks = load_tasks()
         save_approvals(approvals)
         return self._finalize(task, decision, action, execution, load_state(), tasks)
