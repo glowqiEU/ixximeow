@@ -2,6 +2,7 @@ import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from core.persistence import load_json, load_record, load_record_list, save_json
 
@@ -62,6 +63,18 @@ class TestPersistence(unittest.TestCase):
             save_json(path, [])
             with self.assertRaisesRegex(ValueError, "invalid record"):
                 load_record(path)
+
+    def test_failed_replace_preserves_target_and_removes_temporary_file(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "state.json"
+            save_json(path, {"stable": True})
+
+            with patch.object(Path, "replace", side_effect=OSError("disk failure")):
+                with self.assertRaisesRegex(OSError, "disk failure"):
+                    save_json(path, {"partial": True})
+
+            self.assertEqual(load_json(path), {"stable": True})
+            self.assertFalse(path.with_name("state.json.tmp").exists())
 
 
 if __name__ == "__main__":
