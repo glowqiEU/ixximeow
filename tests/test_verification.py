@@ -4,7 +4,11 @@ from core.action import Action
 from core.evidence import Evidence
 from core.execution import Execution
 from core.models import Result, Task
-from core.verification import verify_evidence, verify_execution_result
+from core.verification import (
+    verify_evidence,
+    verify_execution_result,
+    verify_technical_artifacts,
+)
 
 
 class TestExecutionVerification(unittest.TestCase):
@@ -30,6 +34,60 @@ class TestExecutionVerification(unittest.TestCase):
         verify_execution_result(
             self.task, self.action, self.execution, self.result
         )
+
+    def test_valid_technical_artifacts_pass(self):
+        evidence = Evidence(
+            result_id="result-1",
+            execution_id="execution-1",
+            kind="execution_output",
+            claim="post_id",
+            value="123",
+            content="post id 123",
+        )
+
+        verify_technical_artifacts(
+            self.action, self.execution, self.result, [evidence]
+        )
+
+    def test_technical_artifacts_reject_wrong_result_lineage(self):
+        result = Result(
+            task_id="task-1",
+            action_id="action-2",
+            execution_id="execution-1",
+            success=True,
+            summary="done",
+        )
+
+        with self.assertRaises(ValueError):
+            verify_technical_artifacts(
+                self.action, self.execution, result, []
+            )
+
+    def test_technical_artifacts_reject_status_result_contradiction(self):
+        execution = Execution(
+            action_id="action-1",
+            task_id="task-1",
+            status="failed",
+            id="execution-1",
+        )
+
+        with self.assertRaises(ValueError):
+            verify_technical_artifacts(
+                self.action, execution, self.result, []
+            )
+
+    def test_technical_artifacts_reject_non_terminal_execution(self):
+        execution = Execution(
+            action_id="action-1",
+            task_id="task-1",
+            status="running",
+            id="execution-1",
+        )
+
+        with self.assertRaises(ValueError):
+            verify_technical_artifacts(
+                self.action, execution, self.result, []
+            )
 
     def test_wrong_action_is_rejected(self):
         action = Action(task_id="task-1", name="other", id="action-2")
@@ -91,6 +149,19 @@ class TestExecutionVerification(unittest.TestCase):
         evidence = Evidence(
             result_id="result-2",
             execution_id="execution-1",
+            kind="execution_output",
+            claim="post_id",
+            value="123",
+            content="post id 123",
+        )
+
+        with self.assertRaises(ValueError):
+            verify_evidence(self.result, self.execution, evidence)
+
+    def test_evidence_with_wrong_execution_is_rejected(self):
+        evidence = Evidence(
+            result_id="result-1",
+            execution_id="execution-2",
             kind="execution_output",
             claim="post_id",
             value="123",
