@@ -3,12 +3,10 @@ from unittest.mock import patch
 
 from core.action import Action
 from core.action_registry import ActionRegistry
-from core.context import AgentContext
-from core.decision import Decision
 from core.execution import Execution
-from core.state import SystemState
-from core.models import Task
+from core.models import Decision, Task
 from core.orchestrator_v2 import OrchestratorV2
+from core.state import SystemState
 
 
 class TestOrchestratorUncertainExecution(unittest.TestCase):
