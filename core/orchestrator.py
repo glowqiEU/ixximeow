@@ -3,6 +3,7 @@ from .action_registry import ActionRegistry
 from .action_store import find_action_by_id
 from .approval_store import load_approvals, save_approvals
 from .decision_store import load_decisions
+from .execution_service import reserve_execution
 from .history import HistoryEvent
 from .history_store import append_event
 from .orchestrator_v2 import OrchestratorV2
@@ -73,9 +74,10 @@ class Orchestrator(OrchestratorV2):
         if action.permission_level != approval.required_level:
             raise ValueError("approved action permission level does not match approval")
 
+        execution = reserve_execution(action)
         task = transition_task(task, "running")
         index = next(index for index, item in enumerate(tasks) if item.id == task.id)
         tasks[index] = task
         save_tasks(tasks)
         save_approvals(approvals)
-        return self._finalize(task, decision, action, load_state(), tasks)
+        return self._finalize(task, decision, action, execution, load_state(), tasks)
