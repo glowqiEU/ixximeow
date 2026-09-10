@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional
 
 from .action import Action
 from .persistence import load_json, save_json
@@ -16,7 +17,7 @@ def load_actions() -> list[Action]:
     return [Action(**item) for item in data]
 
 
-def find_action_by_id(action_id: str) -> Action | None:
+def find_action_by_id(action_id: str) -> Optional[Action]:
     return next((action for action in load_actions() if action.id == action_id), None)
 
 
