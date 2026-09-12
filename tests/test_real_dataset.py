@@ -2,6 +2,7 @@ from pathlib import Path
 
 from core.personality import BehaviorAction
 from personality_benchmark.real_case_store import load_real_cases
+from core.personality_store import load_learning_signals
 
 
 def test_committed_real_dataset_is_valid_and_provenance_safe() -> None:
@@ -27,3 +28,30 @@ def test_first_real_case_preserves_confirmed_behavior_without_global_rule() -> N
     assert case.expected_action is BehaviorAction.SET_BOUNDARY
     assert case.ideal_response == "nieko"
     assert "Scope is this case only" in case.notes
+
+
+def test_first_case_feedback_is_persisted_without_global_lesson() -> None:
+    path = (
+        Path(__file__).parent.parent
+        / "personality_benchmark/data/learning_signals.json"
+    )
+    signals = load_learning_signals(path=path)
+
+    assert [signal.rating for signal in signals] == ["me", "me", "not_me"]
+    assert all(signal.case_id == "real-snapchat-buyer-lowball-001" for signal in signals)
+    assert all(signal.inferred_lesson is None for signal in signals)
+    assert signals[0].selected_best_candidate_ids == ("a", "b")
+
+
+def test_second_case_is_explicit_contrast_not_buyer_globalization() -> None:
+    path = (
+        Path(__file__).parent.parent
+        / "personality_benchmark/data/real_cases.json"
+    )
+    cases = {case.id: case for case in load_real_cases(path)}
+    lowball = cases["real-snapchat-buyer-lowball-001"]
+    normal = cases["real-snapchat-potential-buyer-price-002"]
+
+    assert lowball.expected_action is BehaviorAction.SET_BOUNDARY
+    assert normal.expected_action is BehaviorAction.ANSWER
+    assert normal.expected_boundary_behavior == "none"

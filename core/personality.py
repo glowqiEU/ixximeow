@@ -250,6 +250,7 @@ class LearningSignal:
     relationship_correction: Optional[dict[str, Any]] = None
     boundary_correction: Optional[str] = None
     selected_best_candidate_id: Optional[str] = None
+    selected_best_candidate_ids: tuple[str, ...] = ()
     candidate_id: Optional[str] = None
 
     def __post_init__(self) -> None:

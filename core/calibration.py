@@ -44,6 +44,7 @@ class CalibrationFeedback:
     rating: MirrorRating
     reason: str
     selected_best_candidate_id: Optional[str] = None
+    selected_best_candidate_ids: tuple[str, ...] = ()
     correction: Optional[str] = None
     corrected_action: Optional[BehaviorAction] = None
     corrected_relationship: Optional[dict[str, object]] = None
@@ -88,10 +89,10 @@ class CalibrationWorkflow:
         candidates = {candidate.id: candidate for candidate in session.candidates}
         if feedback.candidate_id not in candidates:
             raise ValueError("feedback candidate not found")
-        if (
-            feedback.selected_best_candidate_id is not None
-            and feedback.selected_best_candidate_id not in candidates
-        ):
+        best_ids = feedback.selected_best_candidate_ids
+        if feedback.selected_best_candidate_id is not None:
+            best_ids = tuple(dict.fromkeys((*best_ids, feedback.selected_best_candidate_id)))
+        if any(candidate_id not in candidates for candidate_id in best_ids):
             raise ValueError("best candidate not found")
         candidate = candidates[feedback.candidate_id]
         case = session.case
@@ -138,6 +139,7 @@ class CalibrationWorkflow:
             relationship_correction=feedback.corrected_relationship,
             boundary_correction=feedback.corrected_boundary_behavior,
             selected_best_candidate_id=feedback.selected_best_candidate_id,
+            selected_best_candidate_ids=best_ids,
             candidate_id=feedback.candidate_id,
         )
         return CalibrationResult(signal=signal, selected_candidate=candidate)

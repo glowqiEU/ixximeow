@@ -146,3 +146,27 @@ def test_relationship_and_boundary_corrections_are_preserved() -> None:
 
     assert result.signal.relationship_correction == {"relationship_type": "stranger"}
     assert result.signal.boundary_correction == "explicit_minimal"
+
+
+def test_multiple_candidates_can_be_equally_best() -> None:
+    workflow = CalibrationWorkflow()
+    case = real_case()
+    session = workflow.start(
+        case,
+        (
+            CalibrationCandidate("a", BehaviorAction.SET_BOUNDARY, "nieko"),
+            CalibrationCandidate("b", BehaviorAction.SET_BOUNDARY, "už 20? nieko"),
+        ),
+    )
+    result = workflow.submit(
+        session,
+        CalibrationFeedback(
+            case_id=case.id,
+            candidate_id="a",
+            rating=MirrorRating.ME,
+            reason="both are me",
+            selected_best_candidate_ids=("a", "b"),
+        ),
+    )
+
+    assert result.signal.selected_best_candidate_ids == ("a", "b")

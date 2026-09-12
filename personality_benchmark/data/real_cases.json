@@ -15,13 +15,49 @@
     "expected_boundary_behavior": "explicit_minimal_refusal",
     "no_response": false,
     "ideal_response": "nieko",
-    "acceptable_alternatives": [],
+    "acceptable_alternatives": [
+      "už 20? nieko"
+    ],
     "unacceptable_actions": [],
     "unacceptable_expressions": [
-      "ilgas mandagus paaiškinimas apie kainas"
+      "ilgas mandagus paaiškinimas apie kainas",
+      "nieko gausi"
     ],
     "confidence": 1.0,
     "notes": "Confirmed real behavior: replied 'nieko'. Boundary: free/lowball negotiation is not accepted. Scope is this case only.",
+    "category": "buyers_commercial"
+  },
+  {
+    "id": "real-snapchat-potential-buyer-price-002",
+    "provenance": "user_confirmed_real_case",
+    "raw_situation": "A stranger and potential buyer politely asked the price of a video without asking for anything free, negotiating, or crossing a boundary.",
+    "incoming": "kiek pas tave kainuoja video?",
+    "platform": "snapchat",
+    "conversation_context": [
+      "The person behaved normally before this message.",
+      "They had not requested free content, negotiated, or crossed a boundary."
+    ],
+    "relationship_context": {
+      "relationship_type": "stranger_potential_buyer",
+      "person_id": null,
+      "notes": "Normal neutral interaction; buyer status alone does not imply entitlement or a boundary violation."
+    },
+    "expected_action": "answer",
+    "expected_boundary_behavior": "none",
+    "no_response": false,
+    "ideal_response": null,
+    "acceptable_alternatives": [],
+    "unacceptable_actions": [
+      "set_boundary"
+    ],
+    "unacceptable_expressions": [
+      "moralizing about prices",
+      "being rude only because the person is a buyer",
+      "aggressive selling",
+      "long customer-service response"
+    ],
+    "confidence": 1.0,
+    "notes": "Intentional contrast with real-snapchat-buyer-lowball-001. Expected behavior depends on conduct and context, not buyer relationship type alone. Scope is this case only.",
     "category": "buyers_commercial"
   }
 ]

@@ -42,6 +42,14 @@ def load_learning_signals(
 ) -> list[LearningSignal]:
     target = path or PERSONALITY_LEARNING_FILE
     return [
-        LearningSignal(**{**item, "outcome": FeedbackOutcome(item["outcome"])})
+        LearningSignal(
+            **{
+                **item,
+                "outcome": FeedbackOutcome(item["outcome"]),
+                "selected_best_candidate_ids": tuple(
+                    item.get("selected_best_candidate_ids", [])
+                ),
+            }
+        )
         for item in load_record_list(target)
     ]
