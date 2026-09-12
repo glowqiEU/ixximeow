@@ -113,7 +113,7 @@
       "person_id": null,
       "notes": "Established pleasant contact with warmth and some familiarity; not a random stranger and not represented as an intimate relationship."
     },
-    "expected_action": "ask",
+    "expected_action": "acknowledge",
     "expected_boundary_behavior": "none",
     "no_response": false,
     "ideal_response": null,
@@ -128,7 +128,7 @@
       "a list of unsolicited life advice"
     ],
     "confidence": 0.7,
-    "notes": "Prediction test. ASK is the model prediction pending user calibration: invite the liked known person to share more before offering help. High confidence applies to the user-confirmed NOT_ME constraints. This is not a global rule for soft or caring situations.",
+    "notes": "Calibration round two prediction: ACKNOWLEDGE through warm, light contact while leaving room either to talk about the bad day or to shift attention elsewhere. The first ASK prediction and all three question-only expressions were rated CLOSE because they too narrowly assumed a wish to explain. This social-perspective hypothesis depends on relationship and situation; it is not a global rule that an upset person wants distraction.",
     "category": "soft_caring"
   }
 ]
