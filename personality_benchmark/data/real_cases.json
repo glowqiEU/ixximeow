@@ -63,5 +63,38 @@
     "confidence": 1.0,
     "notes": "Intentional contrast with real-snapchat-buyer-lowball-001. Expected behavior depends on conduct and context, not buyer relationship type alone. Scope is this case only.",
     "category": "buyers_commercial"
+  },
+  {
+    "id": "real-snapchat-stranger-work-provocation-003",
+    "provenance": "user_confirmed_real_case",
+    "raw_situation": "A near-unknown Snapchat follower replied to a story with a mocking challenge about whether content creation counts as work.",
+    "incoming": "tu rimtai galvoji, kad čia darbas? 😂",
+    "platform": "snapchat",
+    "conversation_context": [
+      "There was almost no prior interaction.",
+      "The message is more plausibly provocative than a sincere question.",
+      "Neither person owes the other attention or an explanation."
+    ],
+    "relationship_context": {
+      "relationship_type": "stranger_follower",
+      "person_id": null,
+      "notes": "No close relationship. Low familiarity; the sender's exact motive remains inferred rather than observed."
+    },
+    "expected_action": "joke",
+    "expected_boundary_behavior": "provocation_disrespect_no_hard_boundary",
+    "no_response": false,
+    "ideal_response": null,
+    "acceptable_alternatives": [],
+    "unacceptable_actions": [],
+    "unacceptable_expressions": [
+      "long explanation that content creation is a legitimate career",
+      "defending herself to a stranger",
+      "listing income or achievements to prove legitimacy",
+      "performative confidence about not needing validation",
+      "artificially aggressive queen or baddie response"
+    ],
+    "confidence": 0.6,
+    "notes": "Prediction test. JOKE is the model prediction pending user calibration; IGNORE and PUSH_BACK remain plausible alternatives. High confidence applies only to the user-confirmed NOT_ME constraints. This record must not be promoted into personality truth without feedback.",
+    "category": "annoying_boundary_pressure"
   }
 ]

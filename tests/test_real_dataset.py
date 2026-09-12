@@ -71,3 +71,16 @@ def test_second_case_accepts_expression_set_without_single_best() -> None:
     assert [signal.rating for signal in case_signals] == ["me", "me", "me"]
     assert all(signal.selected_best_candidate_ids == () for signal in case_signals)
     assert all(signal.inferred_lesson is None for signal in case_signals)
+
+
+def test_third_case_preserves_prediction_uncertainty_without_learning_signal() -> None:
+    root = Path(__file__).parent.parent / "personality_benchmark/data"
+    cases = {case.id: case for case in load_real_cases(root / "real_cases.json")}
+    signals = load_learning_signals(path=root / "learning_signals.json")
+    case = cases["real-snapchat-stranger-work-provocation-003"]
+
+    assert case.expected_action is BehaviorAction.JOKE
+    assert case.confidence == 0.6
+    assert case.acceptable_alternatives == ()
+    assert "pending user calibration" in case.notes
+    assert all(signal.case_id != case.id for signal in signals)
