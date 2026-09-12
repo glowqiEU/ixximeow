@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 
 from .personality import (
     BehaviorAction,
@@ -90,6 +90,12 @@ class SituationUnderstandingResult:
         return self.situation is not None and self.failure is None
 
 
+class SituationInterpreter(Protocol):
+    """Reasoning-provider boundary; implementations return data, never authority."""
+
+    def interpret(self, raw: RawInteractionInput) -> dict[str, Any]: ...
+
+
 class SituationUnderstandingAdapter:
     """Validate structured model output without treating inference as observation."""
 
@@ -97,6 +103,22 @@ class SituationUnderstandingAdapter:
         "intent", "motive", "stakes", "response_disposition",
         "boundary_required", "boundary_confidence", "proposed_action",
     }
+
+    def understand(
+        self, raw: RawInteractionInput, interpreter: SituationInterpreter
+    ) -> SituationUnderstandingResult:
+        try:
+            output = interpreter.interpret(raw)
+        except Exception as exc:
+            return SituationUnderstandingResult(
+                situation=None,
+                failure=InterpretationFailure(
+                    InterpretationFailureKind.INTERPRETATION_ERROR,
+                    f"situation interpreter failed: {type(exc).__name__}",
+                ),
+                action_authorized=False,
+            )
+        return self.interpret(raw, output)
 
     def interpret(
         self, raw: RawInteractionInput, model_output: dict[str, Any]

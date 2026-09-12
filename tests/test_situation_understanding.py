@@ -191,3 +191,29 @@ def test_low_confidence_boundary_inference_waits_instead_of_replying() -> None:
     assert result.decision.action is BehaviorAction.WAIT
     assert "low_boundary_confidence" in result.decision.basis.uncertainty
     assert result.expression is None
+
+
+def test_interpreter_provider_failure_returns_no_situation_or_authority() -> None:
+    class FailingInterpreter:
+        def interpret(self, interaction):
+            raise TimeoutError("provider unavailable")
+
+    result = SituationUnderstandingAdapter().understand(raw(), FailingInterpreter())
+
+    assert not result.success
+    assert result.situation is None
+    assert result.failure.kind is InterpretationFailureKind.INTERPRETATION_ERROR
+    assert "TimeoutError" in result.failure.message
+    assert not result.action_authorized
+
+
+def test_interpreter_output_always_passes_schema_validation() -> None:
+    class InvalidInterpreter:
+        def interpret(self, interaction):
+            return {"free_text": "probably answer"}
+
+    result = SituationUnderstandingAdapter().understand(raw(), InvalidInterpreter())
+
+    assert not result.success
+    assert result.failure.kind is InterpretationFailureKind.INVALID_MODEL_OUTPUT
+    assert result.situation is None
