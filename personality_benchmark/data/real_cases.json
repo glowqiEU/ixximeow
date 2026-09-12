@@ -1,0 +1,27 @@
+[
+  {
+    "id": "real-snapchat-buyer-lowball-001",
+    "provenance": "user_confirmed_real_case",
+    "raw_situation": "A stranger/buyer asked what they could get for 20 euros. The user replied with a direct refusal.",
+    "incoming": "ką galiu gauti už 20 eurų?",
+    "platform": "snapchat",
+    "conversation_context": [],
+    "relationship_context": {
+      "relationship_type": "stranger_buyer",
+      "person_id": null,
+      "notes": "No additional relationship history was supplied."
+    },
+    "expected_action": "set_boundary",
+    "expected_boundary_behavior": "explicit_minimal_refusal",
+    "no_response": false,
+    "ideal_response": "nieko",
+    "acceptable_alternatives": [],
+    "unacceptable_actions": [],
+    "unacceptable_expressions": [
+      "ilgas mandagus paaiškinimas apie kainas"
+    ],
+    "confidence": 1.0,
+    "notes": "Confirmed real behavior: replied 'nieko'. Boundary: free/lowball negotiation is not accepted. Scope is this case only.",
+    "category": "buyers_commercial"
+  }
+]
