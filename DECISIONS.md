@@ -391,6 +391,54 @@ one reaction may be contextual. durable identity change requires stronger eviden
 
 ---
 
+## D027 — real-user benchmarks have explicit provenance
+
+### decision
+
+the real benchmark store accepts only `user_confirmed_real_case` records. synthetic and inferred cases use separate authority labels and cannot be promoted as personal evidence.
+
+### why
+
+test fixtures prove software behavior; they do not prove how the user thinks or acts.
+
+---
+
+## D028 — mirror calibration preserves action and expression
+
+### decision
+
+each candidate has a typed behavior action and an optional expression. mirror feedback can independently correct action, relationship, boundary, silence, or wording.
+
+### why
+
+a natural sentence can still represent the wrong decision, and the right decision can still be expressed unlike IXXIMEOW.
+
+---
+
+## D029 — preference scope follows evidence scope
+
+### decision
+
+learning promotion uses context, relationship, channel, provenance, confidence, and deduplicated case evidence. narrow evidence produces a narrow proposed preference.
+
+### why
+
+repeated minimal buyer boundaries support a buyer-context preference, not a universal claim that the user always prefers short responses.
+
+---
+
+## D030 — no second personality genome
+
+### decision
+
+`IDENTITY.md` remains the human-readable identity constitution. Existing `PersonalityCore` is the minimal machine-readable representation; contextual and proposed knowledge remains in typed learning objects until approved.
+
+### why
+
+a parallel genome would duplicate authority and create silent contradictions. machine-readable knowledge should reference, constrain, or propose changes to the existing identity model rather than compete with it.
+
+---
+
 ## decision format
 
 future architectural decisions should follow:

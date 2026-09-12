@@ -239,12 +239,31 @@ class LearningSignal:
     inferred_lesson: Optional[str]
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: str = field(default_factory=_now)
+    case_id: Optional[str] = None
+    rating: Optional[str] = None
+    context_category: Optional[str] = None
+    relationship_type: Optional[str] = None
+    channel: Optional[str] = None
+    source_provenance: Optional[str] = None
+    evidence_confidence: float = 0.5
+    corrected_action: Optional[str] = None
+    relationship_correction: Optional[dict[str, Any]] = None
+    boundary_correction: Optional[str] = None
+    selected_best_candidate_id: Optional[str] = None
+    candidate_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         if not self.original_input.strip() or not self.reason.strip():
             raise ValueError("learning input and reason cannot be empty")
         if self.outcome is FeedbackOutcome.CORRECTED and not self.correction:
-            raise ValueError("corrected feedback requires correction")
+            has_structured_correction = (
+                self.corrected_action is not None
+                or self.relationship_correction is not None
+                or self.boundary_correction is not None
+            )
+            if not has_structured_correction:
+                raise ValueError("corrected feedback requires correction")
+        _validate_score("evidence confidence", self.evidence_confidence)
 
 
 @dataclass(frozen=True)
@@ -350,6 +369,10 @@ class IdentityCritic:
         "forced_humor": ("just kidding lol",),
         "fake_intimacy": ("love you babe", "bestie"),
         "ai_assistant_voice": ("certainly!", "i'd be happy to help"),
+        "excessive_politeness": (
+            "thank you so much for your understanding",
+            "i sincerely apologize",
+        ),
         "cringe_slang": ("slay queen", "periodt"),
         "unnecessary_aggression": ("you're pathetic", "idiot"),
         "overexplaining": (),

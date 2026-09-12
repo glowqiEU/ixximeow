@@ -102,3 +102,22 @@ def test_unacceptable_action_overrides_other_matches() -> None:
     assert score.action_match == 0.0
     assert score.uncertainty_match == 0.0
     assert score.would_send_or_do == 0.0
+
+
+def test_legacy_validated_label_cannot_impersonate_real_case() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="non-real benchmark status"):
+        PersonalityBenchmarkCase(
+            id="ambiguous-authority",
+            status="validated",
+            context="not enough provenance",
+            incoming="message",
+            relationship_state={},
+            expected_actions=(BehaviorAction.ANSWER,),
+            acceptable_responses=(),
+            unacceptable_responses=(),
+            expected_boundary_handling="none",
+            notes="must use RealUserBenchmarkCase",
+            no_response=False,
+        )

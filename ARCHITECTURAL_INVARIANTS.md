@@ -70,6 +70,22 @@ Every personality decision records concise situation signals, relationship signa
 
 A single correction is an evidence candidate. Repeated consistent and deduplicated corrections may become a proposed learned preference. Neither status can modify `PersonalityCore`; durable principles require a future explicit approval boundary.
 
+## 18. benchmark provenance determines evidence authority
+
+Only a case explicitly marked `user_confirmed_real_case` may enter the real-user ground-truth store. Synthetic fixtures and inferred examples remain useful for infrastructure tests but have no personality-learning authority.
+
+## 19. personality core contains no situation-specific truths
+
+One-off behavior, temporary state, contextual preference, relationship preference, and channel expression preference remain scoped. A durable candidate requires compatible evidence across distinct contexts and relationship types, and still cannot enter `PersonalityCore` without explicit approval.
+
+## 20. mirror ratings do not erase decision structure
+
+`ME`, `CLOSE`, and `NOT_ME` feedback identifies a candidate while preserving its behavior action separately from its expression. Corrections to action, relationship, boundary, and wording remain separately auditable.
+
+## 21. benchmark comparison is regression-aware
+
+Repeated benchmark runs preserve per-case results. Aggregate improvement cannot hide a case that became less IXXIMEOW-like.
+
 ## testing rule
 
 Every invariant that protects a meaningful system boundary should have a regression test. A passing implementation test is not enough when a boundary can be bypassed through another entry point.

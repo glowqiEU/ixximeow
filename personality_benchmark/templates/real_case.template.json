@@ -1,0 +1,23 @@
+{
+  "id": "replace-with-unique-id",
+  "provenance": "user_confirmed_real_case",
+  "raw_situation": "what happened, in your own words",
+  "incoming": "exact incoming message or situation",
+  "platform": "platform-or-channel",
+  "conversation_context": [],
+  "relationship_context": {
+    "relationship_type": "unknown",
+    "person_id": null,
+    "notes": "how you know this person / relevant history"
+  },
+  "expected_action": "answer",
+  "expected_boundary_behavior": "none",
+  "no_response": false,
+  "ideal_response": null,
+  "acceptable_alternatives": [],
+  "unacceptable_actions": [],
+  "unacceptable_expressions": [],
+  "confidence": 1.0,
+  "notes": "anything the system must not infer",
+  "category": "ambiguous"
+}

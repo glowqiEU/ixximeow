@@ -543,6 +543,11 @@ in progress
 - same-message groups, unacceptable actions, expected uncertainty, boundary cases,
   and correction lessons are supported by the schema
 - validated identity truth must come from reviewed real situations later
+- real-user case ingestion with strict provenance and restart-safe persistence
+- Mirror Test sessions with multiple action/expression candidates
+- ME / CLOSE / NOT_ME plus action, relationship, boundary, silence, and text correction
+- repeatable per-case benchmark runs with explicit improvements and regressions
+- scoped preference promotion with cross-context requirements for durable candidates
 
 ### done when
 - core behavior is tested

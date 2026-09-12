@@ -58,6 +58,32 @@ and chosen action. This is audit metadata, not chain-of-thought.
 `TAKE_ACTION` ends at an action proposal. It does not call the executor or bypass
 the existing persisted approval boundary.
 
+## personality benchmark and calibration
+
+The real-user calibration loop is:
+
+```text
+user-confirmed real case
+→ behavior decision
+→ candidate action + optional expression
+→ ME / CLOSE / NOT_ME
+→ structured corrections
+→ persisted LearningSignal
+→ scoped promotion proposal
+→ repeatable benchmark comparison
+```
+
+Real cases, synthetic fixtures, and inferred examples have different provenance.
+Only real user-confirmed cases may enter the ground-truth store.
+
+Preference promotion preserves the narrowest supported scope: one-off, contextual,
+relationship-specific, channel-specific, or durable candidate. A durable candidate
+is still a proposal requiring explicit approval and cannot mutate `PersonalityCore`.
+
+No separate SelfReflectionEngine or Personality Genome is introduced. Drift labels
+from `IdentityCritic`, decision failures, benchmark evaluation, and learning signals
+feed the same calibration report. `IDENTITY.md` remains authoritative.
+
 ---
 
 ## 2. high-level architecture
