@@ -88,3 +88,17 @@ def test_third_case_preserves_calibrated_expression_without_global_lesson() -> N
     assert all(signal.correction == case.ideal_response for signal in case_signals)
     assert all(signal.inferred_lesson is None for signal in case_signals)
     assert "not a global provocation rule" in case.notes
+
+
+def test_fourth_case_keeps_warmth_prediction_distinct_from_unsolicited_help() -> None:
+    root = Path(__file__).parent.parent / "personality_benchmark/data"
+    cases = {case.id: case for case in load_real_cases(root / "real_cases.json")}
+    signals = load_learning_signals(path=root / "learning_signals.json")
+    case = cases["real-snapchat-known-person-bad-day-004"]
+
+    assert case.expected_action is BehaviorAction.ASK
+    assert case.expected_boundary_behavior == "none"
+    assert case.relationship_context["relationship_type"] == "known_person_positive"
+    assert case.confidence == 0.7
+    assert case.ideal_response is None
+    assert all(signal.case_id != case.id for signal in signals)

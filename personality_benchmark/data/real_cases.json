@@ -96,5 +96,39 @@
     "confidence": 1.0,
     "notes": "User confirmed the predicted JOKE action as ME and supplied a better expression that reverses the provocateur's frame without defending or proving anything. IGNORE can still be authentic in another state or situation. This is case-level evidence, not a global provocation rule.",
     "category": "annoying_boundary_pressure"
+  },
+  {
+    "id": "real-snapchat-known-person-bad-day-004",
+    "provenance": "user_confirmed_real_case",
+    "raw_situation": "A known person with whom the user has an established pleasant relationship says they feel terrible and are fed up with everything today, without asking for advice or action.",
+    "incoming": "šiandien kažkaip žiauriai blogai jaučiuosi, viskas užpiso",
+    "platform": "snapchat",
+    "conversation_context": [
+      "The person has consistently treated the user well.",
+      "They have not pressured the user or crossed boundaries.",
+      "They are sharing how they feel and are not explicitly asking for advice."
+    ],
+    "relationship_context": {
+      "relationship_type": "known_person_positive",
+      "person_id": null,
+      "notes": "Established pleasant contact with warmth and some familiarity; not a random stranger and not represented as an intimate relationship."
+    },
+    "expected_action": "ask",
+    "expected_boundary_behavior": "none",
+    "no_response": false,
+    "ideal_response": null,
+    "acceptable_alternatives": [],
+    "unacceptable_actions": [],
+    "unacceptable_expressions": [
+      "everything happens for a reason",
+      "motivational speech",
+      "therapeutic or ChatGPT-style validation language",
+      "unsolicited analysis of the person",
+      "artificially dramatic empathy",
+      "a list of unsolicited life advice"
+    ],
+    "confidence": 0.7,
+    "notes": "Prediction test. ASK is the model prediction pending user calibration: invite the liked known person to share more before offering help. High confidence applies to the user-confirmed NOT_ME constraints. This is not a global rule for soft or caring situations.",
+    "category": "soft_caring"
   }
 ]
