@@ -127,8 +127,8 @@
       "artificially dramatic empathy",
       "a list of unsolicited life advice"
     ],
-    "confidence": 0.7,
-    "notes": "Calibration round two prediction: ACKNOWLEDGE through warm, light contact while leaving room either to talk about the bad day or to shift attention elsewhere. The first ASK prediction and all three question-only expressions were rated CLOSE because they too narrowly assumed a wish to explain. This social-perspective hypothesis depends on relationship and situation; it is not a global rule that an upset person wants distraction.",
+    "confidence": 1.0,
+    "notes": "User confirmed ACKNOWLEDGE as ME. The first ASK prediction and all three question-only expressions were CLOSE because they too narrowly assumed a wish to explain. In round two, explicit narration of the internal social strategy was rejected or remained only CLOSE: the expression should naturally provide warm contact without explaining the inferred choice between talking and distraction. This hypothesis remains relationship- and situation-sensitive, not a global rule about upset people.",
     "category": "soft_caring"
   }
 ]

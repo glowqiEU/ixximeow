@@ -101,8 +101,11 @@ def test_fourth_case_calibrates_toward_contact_without_globalizing_distraction()
     assert case.expected_action is BehaviorAction.ACKNOWLEDGE
     assert case.expected_boundary_behavior == "none"
     assert case.relationship_context["relationship_type"] == "known_person_positive"
-    assert case.confidence == 0.7
+    assert case.confidence == 1.0
     assert case.ideal_response is None
-    assert [signal.rating for signal in case_signals] == ["close", "close", "close"]
+    assert [signal.rating for signal in case_signals] == [
+        "close", "close", "close", "close", "not_me", "close"
+    ]
     assert all(signal.inferred_lesson is None for signal in case_signals)
+    assert "internal social strategy" in case.notes
     assert "not a global rule" in case.notes
