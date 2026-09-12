@@ -1,0 +1,15 @@
+[
+  {
+    "id": "example-ignore-001",
+    "status": "example_fixture",
+    "context": "Synthetic infrastructure example only; not a claim about the user.",
+    "incoming": "hey",
+    "relationship_state": {"relationship_type": "stranger"},
+    "expected_actions": ["ignore"],
+    "acceptable_responses": [],
+    "unacceptable_responses": ["hey babe"],
+    "expected_boundary_handling": "none",
+    "notes": "Exercises first-class NO RESPONSE scoring.",
+    "no_response": true
+  }
+]

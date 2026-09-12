@@ -295,6 +295,54 @@ future decisions may invalidate earlier ones, but they should not erase the hist
 
 ---
 
+## D019 — personality is a decision system, not a persona prompt
+
+### decision
+
+personality behavior is modeled as explicit situation, relationship, dynamic state, behavior decision, expression, critic, and learning contracts.
+
+### why
+
+`IDENTITY.md` describes continuity and constraints, but cannot by itself decide whether to answer, wait, joke, set a boundary, or remain silent in a particular relationship and situation.
+
+---
+
+## D020 — behavior and expression are separate
+
+### decision
+
+the system selects a typed `BehaviorAction` before generating concrete language.
+
+### why
+
+a fluent reply can still be the wrong action. separating behavior from expression allows `IGNORE`, `WAIT`, boundaries, escalation, and action proposals to be evaluated without forcing every decision into text generation.
+
+---
+
+## D021 — personality critics have separate authority
+
+### decision
+
+identity correctness and goal correctness are evaluated independently and both gate release.
+
+### why
+
+an on-brand response may be strategically wrong, while a useful response may sound scripted or unlike IXXIMEOW. one blended evaluator would hide which failure occurred.
+
+---
+
+## D022 — corrections produce explicit learning signals
+
+### decision
+
+accepted, rejected, and corrected candidates are stored as structured feedback with source input, reason, correction, and an optional inferred lesson.
+
+### why
+
+chat history alone cannot distinguish a durable preference from a one-off edit. inferred lessons remain inspectable and revisable rather than silently becoming identity truth.
+
+---
+
 ## decision format
 
 future architectural decisions should follow:

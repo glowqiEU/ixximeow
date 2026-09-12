@@ -34,6 +34,22 @@ An executed action must produce a Result with enough lineage to connect task, ac
 
 History records what happened. State records what is happening now. Memory records what the system has learned. These representations must not silently become interchangeable.
 
+## 9. personality behavior precedes expression
+
+The system chooses a typed behavior action before producing language. Expression must not silently choose or change the behavior.
+
+## 10. identity quality and goal quality are separate gates
+
+IdentityCritic evaluates whether an expression remains recognizably IXXIMEOW. GoalCritic evaluates whether the behavior serves the interpreted situation. Neither score substitutes for the other.
+
+## 11. personality decisions do not grant execution authority
+
+`TAKE_ACTION` is a proposed behavior, never permission to execute. External action continues through the existing task, permission, persisted approval, executor, and verification boundaries.
+
+## 12. personality learning is typed and provenance-bearing
+
+Semantic, episodic, relationship, and learned-preference memories remain distinguishable. A correction becomes a structured learning signal; it does not become permanent identity truth merely because it occurred once.
+
 ## testing rule
 
 Every invariant that protects a meaningful system boundary should have a regression test. A passing implementation test is not enough when a boundary can be bypassed through another entry point.

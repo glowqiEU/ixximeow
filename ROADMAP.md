@@ -122,7 +122,15 @@ connect the language model to the deterministic system.
 - escalation
 
 ### status
-planned
+in progress
+
+### current personality slice
+- typed personality core, dynamic state, relationship, and situation contracts
+- deterministic behavior policy with first-class no-response decisions
+- behavior separated from expression
+- independent identity and goal critics
+- external action remains proposal-only and approval-bound
+- next: an LLM interpretation adapter that emits validated `SituationModel`
 
 ### done when
 - llm is used for reasoning, not basic filesystem/state operations
@@ -147,7 +155,12 @@ allow ixximeow to learn without turning everything into permanent memory.
 - memory pruning
 
 ### status
-planned
+in progress
+
+### current personality slice
+- explicit semantic, episodic, relationship, and learned-preference memory kinds
+- structured accepted/rejected/corrected learning signals
+- atomic JSON persistence reused without changing legacy memory records
 
 ### rule
 
@@ -515,7 +528,13 @@ prove that the system actually improves.
 - regression tests
 
 ### status
-planned
+in progress
+
+### current personality slice
+- Personality Benchmark v0.1 case and score contracts
+- action, boundary, relationship, tone, length, scriptedness, no-response, and would-send/do dimensions
+- synthetic fixtures are explicitly marked `example_fixture`
+- validated identity truth must come from reviewed real situations later
 
 ### done when
 - core behavior is tested
