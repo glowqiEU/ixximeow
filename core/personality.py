@@ -146,6 +146,7 @@ class SituationModel:
     observed_facts: dict[str, Any] = field(default_factory=dict)
     uncertainty: tuple[str, ...] = ()
     response_disposition: Optional[ResponseDisposition] = None
+    boundary_confidence: float = 1.0
 
     def __post_init__(self) -> None:
         if self.stakes not in {"low", "medium", "high"}:
@@ -158,6 +159,7 @@ class SituationModel:
             self.proposed_action, BehaviorAction
         ):
             raise ValueError("proposed_action must be a BehaviorAction")
+        _validate_score("boundary confidence", self.boundary_confidence)
 
     @property
     def intent_value(self) -> str:
@@ -283,7 +285,14 @@ class BehaviorPolicy:
         core: Optional[PersonalityCore] = None,
     ) -> BehaviorDecision:
         disposition = situation.response_disposition
-        if situation.boundary_required or disposition is ResponseDisposition.BOUNDARY_RESPONSE:
+        boundary_is_uncertain = (
+            (situation.boundary_required or disposition is ResponseDisposition.BOUNDARY_RESPONSE)
+            and situation.boundary_confidence < 0.5
+        )
+        if boundary_is_uncertain:
+            action = BehaviorAction.WAIT
+            reason = "uncertain boundary interpretation fails closed"
+        elif situation.boundary_required or disposition is ResponseDisposition.BOUNDARY_RESPONSE:
             action = BehaviorAction.SET_BOUNDARY
             reason = "the interpreted situation requires a boundary"
         elif situation.needs_human_judgment or disposition is ResponseDisposition.UNCERTAIN:
@@ -321,7 +330,12 @@ class BehaviorPolicy:
                 situation_signals=(f"response_needed:{situation.response_needed}",),
                 relationship_signals=(),
                 personality_principles=(),
-                boundary_state=("required" if situation.boundary_required else "not_required"),
+                boundary_state=(
+                    f"required:{situation.boundary_confidence}"
+                    if situation.boundary_required
+                    or disposition is ResponseDisposition.BOUNDARY_RESPONSE
+                    else "not_required"
+                ),
                 uncertainty=situation.uncertainty,
                 chosen_action=action,
             ),

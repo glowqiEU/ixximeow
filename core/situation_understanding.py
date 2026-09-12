@@ -152,6 +152,8 @@ class SituationUnderstandingAdapter:
             uncertainty.append("low_intent_confidence")
         if motive.confidence < 0.5:
             uncertainty.append("low_motive_confidence")
+        if output["boundary_required"] and boundary_confidence < 0.5:
+            uncertainty.append("low_boundary_confidence")
         memory_ids = {memory.id for memory in raw.relevant_memory}
         if any(set(memory.contradicts) & memory_ids for memory in raw.relevant_memory):
             uncertainty.append("contradictory_memory")
@@ -160,7 +162,11 @@ class SituationUnderstandingAdapter:
             uncertainty.append("duplicate_history_events")
 
         action = BehaviorAction(output["proposed_action"])
-        needs_human = disposition is ResponseDisposition.UNCERTAIN or intent.confidence < 0.5
+        needs_human = (
+            disposition is ResponseDisposition.UNCERTAIN
+            or intent.confidence < 0.5
+            or (output["boundary_required"] and boundary_confidence < 0.5)
+        )
         if needs_human:
             action = BehaviorAction.WAIT
         response_needed = disposition not in {
@@ -185,6 +191,7 @@ class SituationUnderstandingAdapter:
             },
             uncertainty=tuple(uncertainty),
             response_disposition=disposition,
+            boundary_confidence=float(boundary_confidence),
         )
 
     @staticmethod

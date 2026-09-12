@@ -79,3 +79,34 @@ def test_partial_low_confidence_relationship_does_not_trigger_rule() -> None:
 
     assert result.decision.action is BehaviorAction.ANSWER
     assert "relationship_low_confidence" in result.decision.basis.uncertainty
+
+
+def test_ambiguous_sender_prevents_relationship_rule() -> None:
+    uncertain_situation = situation()
+    uncertain_situation = SituationModel(
+        **{**uncertain_situation.__dict__, "uncertainty": ("ambiguous_sender",)}
+    )
+    result = pipeline().decide(
+        situation=uncertain_situation,
+        relationship=RelationshipState(
+            person_id="candidate", relationship_type=RelationshipType.FRIEND
+        ),
+        state=PersonalityState(),
+        candidate="yes",
+    )
+
+    assert result.decision.action is BehaviorAction.ANSWER
+    assert result.decision.basis.relationship_signals == ()
+
+
+def test_relationship_rule_cannot_weaken_boundary() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="cannot weaken"):
+        RelationshipActionRule(
+            rule_id="unsafe",
+            relationship_type=RelationshipType.FRIEND,
+            from_action=BehaviorAction.SET_BOUNDARY,
+            to_action=BehaviorAction.TEASE,
+            principle="synthetic unsafe rule",
+        )

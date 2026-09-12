@@ -37,6 +37,11 @@ class RelationshipActionRule:
             raise ValueError("maximum entitlement must be between 0 and 1")
         if self.maximum_boundary_violations is not None and self.maximum_boundary_violations < 0:
             raise ValueError("maximum boundary violations cannot be negative")
+        if (
+            self.from_action is BehaviorAction.SET_BOUNDARY
+            and self.to_action is not BehaviorAction.SET_BOUNDARY
+        ):
+            raise ValueError("relationship rule cannot weaken a boundary decision")
 
     def matches(self, relationship: RelationshipState, action: BehaviorAction) -> bool:
         return (
@@ -67,8 +72,14 @@ class RelationshipAwarePolicy(BehaviorPolicy):
     ) -> BehaviorDecision:
         decision = super().choose(situation, relationship, state, core)
         uncertainty = list(decision.basis.uncertainty)
-        if relationship.confidence < 0.5:
+        blocking_uncertainty = {
+            "ambiguous_sender", "unknown_sender", "sender_identity_conflict",
+            "contradictory_memory",
+        }
+        relationship_uncertain = relationship.confidence < 0.5
+        if relationship_uncertain:
             uncertainty.append("relationship_low_confidence")
+        if relationship_uncertain or blocking_uncertainty & set(uncertainty):
             return replace(
                 decision,
                 basis=replace(decision.basis, uncertainty=tuple(uncertainty)),

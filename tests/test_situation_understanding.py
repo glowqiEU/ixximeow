@@ -168,3 +168,26 @@ def test_duplicate_history_is_uncertainty_not_repeated_evidence() -> None:
     )
 
     assert "duplicate_history_events" in result.situation.uncertainty
+
+
+def test_low_confidence_boundary_inference_waits_instead_of_replying() -> None:
+    understood = SituationUnderstandingAdapter().interpret(
+        raw(),
+        valid_payload(
+            boundary_required=True,
+            boundary_confidence=0.2,
+            response_disposition="boundary_response",
+            proposed_action="set_boundary",
+        ),
+    )
+    result = PersonalityDecisionPipeline(
+        PersonalityCore((), (), (), ())
+    ).decide(
+        situation=understood.situation,
+        relationship=RelationshipState(person_id="person-1"),
+        state=PersonalityState(),
+    )
+
+    assert result.decision.action is BehaviorAction.WAIT
+    assert "low_boundary_confidence" in result.decision.basis.uncertainty
+    assert result.expression is None
