@@ -274,6 +274,18 @@ class GoalCritic:
             issues.append("unnecessary_response")
         if decision.action is BehaviorAction.IGNORE and expression is not None:
             issues.append("ignore_has_expression")
+        reply_actions = {
+            BehaviorAction.ACKNOWLEDGE,
+            BehaviorAction.ANSWER,
+            BehaviorAction.JOKE,
+            BehaviorAction.TEASE,
+            BehaviorAction.HELP,
+            BehaviorAction.PUSH_BACK,
+            BehaviorAction.SET_BOUNDARY,
+            BehaviorAction.ASK,
+        }
+        if decision.action in reply_actions and expression is None:
+            issues.append("missing_expression")
         return CriticReview(passed=not issues, issues=tuple(issues))
 
 

@@ -114,3 +114,22 @@ def test_identity_and_goal_critics_are_independent_release_gates() -> None:
 def test_models_reject_invalid_normalized_scores() -> None:
     with pytest.raises(ValueError, match="energy"):
         PersonalityState(energy=1.1)
+
+
+def test_reply_behavior_cannot_be_released_without_expression() -> None:
+    result = build_pipeline().decide(
+        situation=SituationModel(
+            context="a direct question",
+            incoming="can you explain?",
+            intent="request answer",
+            motive="understand",
+            stakes="low",
+            response_needed=True,
+            proposed_action=BehaviorAction.ANSWER,
+        ),
+        relationship=RelationshipState(person_id="person-4"),
+        state=PersonalityState(),
+    )
+
+    assert "missing_expression" in result.goal_review.issues
+    assert not result.release_allowed
