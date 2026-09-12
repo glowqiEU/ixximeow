@@ -343,6 +343,54 @@ chat history alone cannot distinguish a durable preference from a one-off edit. 
 
 ---
 
+## D023 — situation understanding is a typed trust boundary
+
+### decision
+
+raw interaction input and structured model interpretation are separate contracts. observed facts remain separate from confidence-bearing inferred intent and motive.
+
+### why
+
+an llm may help interpret ambiguous language, but it must not silently promote an inference into a fact or return prose that downstream execution treats as authoritative.
+
+---
+
+## D024 — response disposition has deterministic semantics
+
+### decision
+
+`NO_RESPONSE`, `WAIT`, `NEEDS_INFORMATION`, `BOUNDARY_RESPONSE`, and `ACTION_PROPOSAL` deterministically map to `IGNORE`, `WAIT`, `ASK`, `SET_BOUNDARY`, and approval-bound `TAKE_ACTION`.
+
+### why
+
+these are system semantics, not stylistic suggestions. a model-proposed action cannot override them.
+
+---
+
+## D025 — relationship adaptation is configured, not inferred personality truth
+
+### decision
+
+the relationship-aware policy ships with no behavior-changing rules. rules must be explicit, named, auditable, and confidence-gated.
+
+### why
+
+relationship fields are useful mechanisms, but arbitrary thresholds such as "high trust means tease" would fabricate personality instead of learning it from validated cases.
+
+---
+
+## D026 — personality learning promotion is staged
+
+### decision
+
+corrections progress from evidence candidate to proposed learned preference only after consistent, deduplicated repetition. neither stage can mutate `PersonalityCore`.
+
+### why
+
+one reaction may be contextual. durable identity change requires stronger evidence and a future explicit approval mechanism.
+
+---
+
 ## decision format
 
 future architectural decisions should follow:

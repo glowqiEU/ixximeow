@@ -50,6 +50,26 @@ IdentityCritic evaluates whether an expression remains recognizably IXXIMEOW. Go
 
 Semantic, episodic, relationship, and learned-preference memories remain distinguishable. A correction becomes a structured learning signal; it does not become permanent identity truth merely because it occurred once.
 
+## 13. situation inference never becomes an observed fact
+
+Raw interaction fields are recorded as observed facts. Intent and motive are uncertain inferences with confidence and evidence references. Inference may cite observations, history, or memory; it may not manufacture a new observed fact.
+
+## 14. interpretation failure cannot authorize behavior
+
+Malformed or failed situation interpretation produces no `SituationModel` and no action authority. Low-confidence interpretation fails closed to `WAIT` until evidence or human judgment resolves it.
+
+## 15. relationship behavior requires explicit policy
+
+Relationship state may change a behavior only through an inspectable configured rule. The default relationship-aware policy contains no guessed personality thresholds. Low-confidence relationship identity cannot trigger a relationship rule.
+
+## 16. decision basis is metadata, not hidden reasoning
+
+Every personality decision records concise situation signals, relationship signals, personality principles, boundary state, uncertainty, and chosen action. It must not store private chain-of-thought or an unbounded reasoning transcript.
+
+## 17. learning promotion cannot mutate personality core
+
+A single correction is an evidence candidate. Repeated consistent and deduplicated corrections may become a proposed learned preference. Neither status can modify `PersonalityCore`; durable principles require a future explicit approval boundary.
+
 ## testing rule
 
 Every invariant that protects a meaningful system boundary should have a regression test. A passing implementation test is not enough when a boundary can be bypassed through another entry point.

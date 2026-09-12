@@ -19,6 +19,10 @@ class PersonalityBenchmarkCase:
     expected_boundary_handling: str
     notes: str
     no_response: bool
+    unacceptable_actions: tuple[BehaviorAction, ...] = ()
+    expected_uncertainty: tuple[str, ...] = ()
+    same_message_group: str | None = None
+    correction_lesson: str | None = None
 
     def __post_init__(self) -> None:
         if self.status not in {"example_fixture", "validated"}:
@@ -42,6 +46,11 @@ def load_cases(path: Path) -> list[PersonalityBenchmarkCase]:
                 ),
                 "acceptable_responses": tuple(item["acceptable_responses"]),
                 "unacceptable_responses": tuple(item["unacceptable_responses"]),
+                "unacceptable_actions": tuple(
+                    BehaviorAction(action)
+                    for action in item.get("unacceptable_actions", [])
+                ),
+                "expected_uncertainty": tuple(item.get("expected_uncertainty", [])),
             }
         )
         for item in raw

@@ -130,7 +130,12 @@ in progress
 - behavior separated from expression
 - independent identity and goal critics
 - external action remains proposal-only and approval-bound
-- next: an LLM interpretation adapter that emits validated `SituationModel`
+- raw interaction and structured interpretation contracts
+- confidence-bearing intent and motive inference with evidence references
+- deterministic response disposition semantics and failure-closed behavior
+- configurable relationship-aware decision rules with no guessed defaults
+- concise auditable decision basis metadata
+- next: real-case calibration of relationship rules and interpretation prompts
 
 ### done when
 - llm is used for reasoning, not basic filesystem/state operations
@@ -161,6 +166,7 @@ in progress
 - explicit semantic, episodic, relationship, and learned-preference memory kinds
 - structured accepted/rejected/corrected learning signals
 - atomic JSON persistence reused without changing legacy memory records
+- staged, deduplicated learning promotion that cannot mutate PersonalityCore
 
 ### rule
 
@@ -534,6 +540,8 @@ in progress
 - Personality Benchmark v0.1 case and score contracts
 - action, boundary, relationship, tone, length, scriptedness, no-response, and would-send/do dimensions
 - synthetic fixtures are explicitly marked `example_fixture`
+- same-message groups, unacceptable actions, expected uncertainty, boundary cases,
+  and correction lessons are supported by the schema
 - validated identity truth must come from reviewed real situations later
 
 ### done when

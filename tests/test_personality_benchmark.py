@@ -71,3 +71,34 @@ def test_would_send_fails_even_when_action_matches_but_tone_does_not() -> None:
 
     assert score.action_match == 1.0
     assert score.would_send_or_do == 0.0
+
+
+def test_unacceptable_action_overrides_other_matches() -> None:
+    case = PersonalityBenchmarkCase(
+        id="example-boundary-001",
+        status="example_fixture",
+        context="synthetic",
+        incoming="request",
+        relationship_state={},
+        expected_actions=(BehaviorAction.SET_BOUNDARY,),
+        acceptable_responses=("no",),
+        unacceptable_responses=(),
+        expected_boundary_handling="explicit",
+        notes="synthetic",
+        no_response=False,
+        unacceptable_actions=(BehaviorAction.ANSWER,),
+        expected_uncertainty=("relationship_low_confidence",),
+    )
+    score = evaluate_case(
+        case,
+        BenchmarkCandidate(
+            action=BehaviorAction.ANSWER,
+            response="no",
+            boundary_handling="explicit",
+            uncertainty=(),
+        ),
+    )
+
+    assert score.action_match == 0.0
+    assert score.uncertainty_match == 0.0
+    assert score.would_send_or_do == 0.0

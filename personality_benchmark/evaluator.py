@@ -14,6 +14,7 @@ class BenchmarkCandidate:
     tone_match: float = 1.0
     length_match: float = 1.0
     scriptedness: float = 0.0
+    uncertainty: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -26,16 +27,22 @@ class BenchmarkScore:
     scriptedness: float
     no_response_match: float
     would_send_or_do: float
+    uncertainty_match: float
 
 
 def evaluate_case(
     case: PersonalityBenchmarkCase, candidate: BenchmarkCandidate
 ) -> BenchmarkScore:
     action_match = float(candidate.action in case.expected_actions)
+    if candidate.action in case.unacceptable_actions:
+        action_match = 0.0
     boundary_match = float(
         candidate.boundary_handling == case.expected_boundary_handling
     )
     no_response_match = float((candidate.response is None) == case.no_response)
+    uncertainty_match = float(
+        set(case.expected_uncertainty) <= set(candidate.uncertainty)
+    )
     unacceptable = candidate.response in case.unacceptable_responses
     acceptable = (
         case.no_response
@@ -52,6 +59,7 @@ def evaluate_case(
         and candidate.tone_match >= 0.8
         and candidate.length_match >= 0.8
         and candidate.scriptedness <= 0.2
+        and uncertainty_match == 1.0
     )
     return BenchmarkScore(
         action_match=action_match,
@@ -62,4 +70,5 @@ def evaluate_case(
         scriptedness=candidate.scriptedness,
         no_response_match=no_response_match,
         would_send_or_do=would_send_or_do,
+        uncertainty_match=uncertainty_match,
     )

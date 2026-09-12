@@ -10,6 +10,10 @@
     "unacceptable_responses": ["hey babe"],
     "expected_boundary_handling": "none",
     "notes": "Exercises first-class NO RESPONSE scoring.",
-    "no_response": true
+    "no_response": true,
+    "unacceptable_actions": ["answer"],
+    "expected_uncertainty": [],
+    "same_message_group": "synthetic-greeting",
+    "correction_lesson": null
   }
 ]

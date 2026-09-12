@@ -8,7 +8,12 @@ from core.personality import (
     RelationshipState,
     RelationshipType,
     SituationModel,
+    UncertainInference,
 )
+
+
+def inference(value: str) -> UncertainInference:
+    return UncertainInference(value=value, confidence=1.0)
 
 
 def build_pipeline() -> PersonalityDecisionPipeline:
@@ -27,8 +32,8 @@ def test_boundary_requirement_wins_before_expression() -> None:
         situation=SituationModel(
             context="a request crosses a known boundary",
             incoming="send it free",
-            intent="obtain unpaid content",
-            motive="access",
+            intent=inference("obtain unpaid content"),
+            motive=inference("access"),
             stakes="medium",
             response_needed=True,
             boundary_required=True,
@@ -53,8 +58,8 @@ def test_no_response_is_a_first_class_decision() -> None:
         situation=SituationModel(
             context="low-value message",
             incoming="hey",
-            intent="unknown",
-            motive="unknown",
+            intent=inference("unknown"),
+            motive=inference("unknown"),
             stakes="low",
             response_needed=False,
         ),
@@ -73,8 +78,8 @@ def test_take_action_is_only_a_proposal_and_requires_approval() -> None:
         situation=SituationModel(
             context="external action requested",
             incoming="post this",
-            intent="publish",
-            motive="share content",
+            intent=inference("publish"),
+            motive=inference("share content"),
             stakes="high",
             response_needed=True,
             proposed_action=BehaviorAction.TAKE_ACTION,
@@ -95,8 +100,8 @@ def test_identity_and_goal_critics_are_independent_release_gates() -> None:
         situation=SituationModel(
             context="answer is useful",
             incoming="can you help?",
-            intent="request help",
-            motive="solve a problem",
+            intent=inference("request help"),
+            motive=inference("solve a problem"),
             stakes="low",
             response_needed=True,
             proposed_action=BehaviorAction.HELP,
@@ -115,14 +120,24 @@ def test_models_reject_invalid_normalized_scores() -> None:
     with pytest.raises(ValueError, match="energy"):
         PersonalityState(energy=1.1)
 
+    with pytest.raises(ValueError, match="intent"):
+        SituationModel(
+            context="invalid",
+            incoming="message",
+            intent="guessed intent",
+            motive=inference("motive"),
+            stakes="low",
+            response_needed=True,
+        )
+
 
 def test_reply_behavior_cannot_be_released_without_expression() -> None:
     result = build_pipeline().decide(
         situation=SituationModel(
             context="a direct question",
             incoming="can you explain?",
-            intent="request answer",
-            motive="understand",
+            intent=inference("request answer"),
+            motive=inference("understand"),
             stakes="low",
             response_needed=True,
             proposed_action=BehaviorAction.ANSWER,

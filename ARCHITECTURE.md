@@ -42,8 +42,18 @@ interaction input
 for another.
 
 The current slice begins at an already interpreted `SituationModel`. A future LLM
-adapter may construct that model from raw input, but schema validation and all
-execution authority remain deterministic.
+adapter may produce an interpretation payload. `SituationUnderstandingAdapter`
+validates that payload into `SituationModel`; malformed output produces no
+situation and no action authority. Observed facts and uncertain inferences remain
+separate.
+
+`ResponseDisposition` owns deterministic non-response and boundary semantics.
+The relationship-aware policy can modify a behavior only through named configured
+rules. It intentionally ships without guessed IXXIMEOW relationship rules.
+
+Each decision exposes a bounded `DecisionBasis`: situation signals, applicable
+relationship rules, relevant personality principles, boundary state, uncertainty,
+and chosen action. This is audit metadata, not chain-of-thought.
 
 `TAKE_ACTION` ends at an action proposal. It does not call the executor or bypass
 the existing persisted approval boundary.

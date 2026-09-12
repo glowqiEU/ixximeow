@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional, Protocol
 from uuid import uuid4
 
 
@@ -55,6 +55,16 @@ class FeedbackOutcome(str, Enum):
     CORRECTED = "corrected"
 
 
+class ResponseDisposition(str, Enum):
+    NO_RESPONSE = "no_response"
+    WAIT = "wait"
+    REPLY_REQUIRED = "reply_required"
+    NEEDS_INFORMATION = "needs_information"
+    BOUNDARY_RESPONSE = "boundary_response"
+    ACTION_PROPOSAL = "action_proposal"
+    UNCERTAIN = "uncertain"
+
+
 @dataclass(frozen=True)
 class PersonalityCore:
     values: tuple[str, ...]
@@ -94,31 +104,78 @@ class RelationshipState:
     reliability: float = 0.0
     entitlement: float = 0.0
     boundary_violations: int = 0
+    confidence: float = 1.0
 
     def __post_init__(self) -> None:
         if not self.person_id.strip():
             raise ValueError("person_id cannot be empty")
-        for name in ("trust", "familiarity", "warmth", "reliability", "entitlement"):
+        if not isinstance(self.relationship_type, RelationshipType):
+            raise ValueError("relationship_type must be a RelationshipType")
+        for name in (
+            "trust", "familiarity", "warmth", "reliability", "entitlement",
+            "confidence",
+        ):
             _validate_score(name, getattr(self, name))
         if self.boundary_violations < 0:
             raise ValueError("boundary_violations cannot be negative")
 
 
 @dataclass(frozen=True)
+class UncertainInference:
+    value: str
+    confidence: float
+    evidence_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.value.strip():
+            raise ValueError("inference value cannot be empty")
+        _validate_score("inference confidence", self.confidence)
+
+
+@dataclass(frozen=True)
 class SituationModel:
     context: str
     incoming: str
-    intent: str
-    motive: str
+    intent: UncertainInference
+    motive: UncertainInference
     stakes: str
     response_needed: bool
     boundary_required: bool = False
     needs_human_judgment: bool = False
     proposed_action: Optional[BehaviorAction] = None
+    observed_facts: dict[str, Any] = field(default_factory=dict)
+    uncertainty: tuple[str, ...] = ()
+    response_disposition: Optional[ResponseDisposition] = None
 
     def __post_init__(self) -> None:
         if self.stakes not in {"low", "medium", "high"}:
             raise ValueError("stakes must be low, medium, or high")
+        if not isinstance(self.intent, UncertainInference):
+            raise ValueError("intent must be an uncertain inference")
+        if not isinstance(self.motive, UncertainInference):
+            raise ValueError("motive must be an uncertain inference")
+        if self.proposed_action is not None and not isinstance(
+            self.proposed_action, BehaviorAction
+        ):
+            raise ValueError("proposed_action must be a BehaviorAction")
+
+    @property
+    def intent_value(self) -> str:
+        return self.intent.value
+
+    @property
+    def motive_value(self) -> str:
+        return self.motive.value
+
+
+@dataclass(frozen=True)
+class DecisionBasis:
+    situation_signals: tuple[str, ...]
+    relationship_signals: tuple[str, ...]
+    personality_principles: tuple[str, ...]
+    boundary_state: str
+    uncertainty: tuple[str, ...]
+    chosen_action: BehaviorAction
 
 
 @dataclass(frozen=True)
@@ -128,6 +185,9 @@ class BehaviorDecision:
     intent: str
     motive: str
     requires_approval: bool = False
+    basis: DecisionBasis = field(
+        default_factory=lambda: DecisionBasis((), (), (), "not_required", (), BehaviorAction.ACKNOWLEDGE)
+    )
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: str = field(default_factory=_now)
 
@@ -202,6 +262,13 @@ class PersonalityPipelineResult:
         )
 
 
+class BehaviorPolicyContract(Protocol):
+    def choose(
+        self, situation: SituationModel, relationship: RelationshipState,
+        state: PersonalityState, core: PersonalityCore,
+    ) -> BehaviorDecision: ...
+
+
 class BehaviorPolicy:
     """Choose behavior only from explicit interpreted facts.
 
@@ -209,13 +276,31 @@ class BehaviorPolicy:
     deterministic and never performs an external action.
     """
 
-    def choose(self, situation: SituationModel) -> BehaviorDecision:
-        if situation.boundary_required:
+    def choose(
+        self, situation: SituationModel,
+        relationship: Optional[RelationshipState] = None,
+        state: Optional[PersonalityState] = None,
+        core: Optional[PersonalityCore] = None,
+    ) -> BehaviorDecision:
+        disposition = situation.response_disposition
+        if situation.boundary_required or disposition is ResponseDisposition.BOUNDARY_RESPONSE:
             action = BehaviorAction.SET_BOUNDARY
             reason = "the interpreted situation requires a boundary"
-        elif situation.needs_human_judgment:
-            action = BehaviorAction.ESCALATE
-            reason = "the situation requires human semantic judgment"
+        elif situation.needs_human_judgment or disposition is ResponseDisposition.UNCERTAIN:
+            action = BehaviorAction.WAIT
+            reason = "uncertain interpretation fails closed without a response or action"
+        elif disposition is ResponseDisposition.WAIT:
+            action = BehaviorAction.WAIT
+            reason = "the interpreted situation should be revisited later"
+        elif disposition is ResponseDisposition.NO_RESPONSE:
+            action = BehaviorAction.IGNORE
+            reason = "the interpreted situation does not need a response"
+        elif disposition is ResponseDisposition.NEEDS_INFORMATION:
+            action = BehaviorAction.ASK
+            reason = "a safe decision requires more information"
+        elif disposition is ResponseDisposition.ACTION_PROPOSAL:
+            action = BehaviorAction.TAKE_ACTION
+            reason = "the interpreted situation calls for an approval-bound action proposal"
         elif not situation.response_needed:
             action = BehaviorAction.IGNORE
             reason = "the interpreted situation does not require a response"
@@ -229,9 +314,17 @@ class BehaviorPolicy:
         return BehaviorDecision(
             action=action,
             reason=reason,
-            intent=situation.intent,
-            motive=situation.motive,
+            intent=situation.intent_value,
+            motive=situation.motive_value,
             requires_approval=action is BehaviorAction.TAKE_ACTION,
+            basis=DecisionBasis(
+                situation_signals=(f"response_needed:{situation.response_needed}",),
+                relationship_signals=(),
+                personality_principles=(),
+                boundary_state=("required" if situation.boundary_required else "not_required"),
+                uncertainty=situation.uncertainty,
+                chosen_action=action,
+            ),
         )
 
 
@@ -249,9 +342,15 @@ class IdentityCritic:
         "personality_caricature": ("dark feminine", "divine feminine"),
     }
 
-    def review(self, expression: Optional[Expression]) -> CriticReview:
+    def review(
+        self, expression: Optional[Expression],
+        decision: Optional[BehaviorDecision] = None,
+    ) -> CriticReview:
         if expression is None:
-            return CriticReview(passed=True)
+            issues = ()
+            if decision and decision.basis.chosen_action is not decision.action:
+                issues = ("decision_basis_mismatch",)
+            return CriticReview(passed=not issues, issues=issues)
         lowered = expression.text.lower()
         issues = [
             name for name, markers in self._markers.items()
@@ -259,6 +358,8 @@ class IdentityCritic:
         ]
         if len(expression.text.split()) > 60:
             issues.append("overexplaining")
+        if decision and decision.basis.chosen_action is not decision.action:
+            issues.append("decision_basis_mismatch")
         return CriticReview(passed=not issues, issues=tuple(dict.fromkeys(issues)))
 
 
@@ -274,6 +375,10 @@ class GoalCritic:
             issues.append("unnecessary_response")
         if decision.action is BehaviorAction.IGNORE and expression is not None:
             issues.append("ignore_has_expression")
+        if decision.action is BehaviorAction.WAIT and expression is not None:
+            issues.append("wait_has_expression")
+        if decision.action is BehaviorAction.TAKE_ACTION and not decision.requires_approval:
+            issues.append("action_missing_approval")
         reply_actions = {
             BehaviorAction.ACKNOWLEDGE,
             BehaviorAction.ANSWER,
@@ -290,9 +395,12 @@ class GoalCritic:
 
 
 class PersonalityDecisionPipeline:
-    def __init__(self, core: PersonalityCore) -> None:
+    def __init__(
+        self, core: PersonalityCore,
+        behavior_policy: Optional[BehaviorPolicyContract] = None,
+    ) -> None:
         self.core = core
-        self.policy = BehaviorPolicy()
+        self.policy = behavior_policy or BehaviorPolicy()
         self.identity_critic = IdentityCritic()
         self.goal_critic = GoalCritic()
 
@@ -300,15 +408,11 @@ class PersonalityDecisionPipeline:
         self, *, situation: SituationModel, relationship: RelationshipState,
         state: PersonalityState, candidate: Optional[str] = None,
     ) -> PersonalityPipelineResult:
-        # Relationship and dynamic state are explicit inputs even where v0.1 has
-        # no justified deterministic rule for them. Silent heuristics would turn
-        # provisional assumptions into personality truth.
-        del relationship, state
-        decision = self.policy.choose(situation)
+        decision = self.policy.choose(situation, relationship, state, self.core)
         expression = None
         if decision.action is not BehaviorAction.IGNORE and candidate:
             expression = Expression(decision_id=decision.id, text=candidate)
-        identity_review = self.identity_critic.review(expression)
+        identity_review = self.identity_critic.review(expression, decision)
         goal_review = self.goal_critic.review(situation, decision, expression)
         return PersonalityPipelineResult(
             decision=decision,
