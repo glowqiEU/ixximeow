@@ -37,10 +37,13 @@ def test_first_case_feedback_is_persisted_without_global_lesson() -> None:
     )
     signals = load_learning_signals(path=path)
 
-    assert [signal.rating for signal in signals] == ["me", "me", "not_me"]
-    assert all(signal.case_id == "real-snapchat-buyer-lowball-001" for signal in signals)
-    assert all(signal.inferred_lesson is None for signal in signals)
-    assert signals[0].selected_best_candidate_ids == ("a", "b")
+    lowball_signals = [
+        signal for signal in signals
+        if signal.case_id == "real-snapchat-buyer-lowball-001"
+    ]
+    assert [signal.rating for signal in lowball_signals] == ["me", "me", "not_me"]
+    assert all(signal.inferred_lesson is None for signal in lowball_signals)
+    assert lowball_signals[0].selected_best_candidate_ids == ("a", "b")
 
 
 def test_second_case_is_explicit_contrast_not_buyer_globalization() -> None:
@@ -55,3 +58,16 @@ def test_second_case_is_explicit_contrast_not_buyer_globalization() -> None:
     assert lowball.expected_action is BehaviorAction.SET_BOUNDARY
     assert normal.expected_action is BehaviorAction.ANSWER
     assert normal.expected_boundary_behavior == "none"
+
+
+def test_second_case_accepts_expression_set_without_single_best() -> None:
+    root = Path(__file__).parent.parent / "personality_benchmark/data"
+    cases = {case.id: case for case in load_real_cases(root / "real_cases.json")}
+    signals = load_learning_signals(path=root / "learning_signals.json")
+    case = cases["real-snapchat-potential-buyer-price-002"]
+    case_signals = [signal for signal in signals if signal.case_id == case.id]
+
+    assert len(case.acceptable_alternatives) == 3
+    assert [signal.rating for signal in case_signals] == ["me", "me", "me"]
+    assert all(signal.selected_best_candidate_ids == () for signal in case_signals)
+    assert all(signal.inferred_lesson is None for signal in case_signals)

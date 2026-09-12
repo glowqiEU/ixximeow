@@ -46,7 +46,11 @@
     "expected_boundary_behavior": "none",
     "no_response": false,
     "ideal_response": null,
-    "acceptable_alternatives": [],
+    "acceptable_alternatives": [
+      "priklauso nuo video, kokio nori?",
+      "30–100 €, priklauso nuo video",
+      "kokio video nori? kainos skiriasi"
+    ],
     "unacceptable_actions": [
       "set_boundary"
     ],
