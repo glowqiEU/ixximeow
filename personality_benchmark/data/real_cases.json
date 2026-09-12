@@ -83,7 +83,7 @@
     "expected_action": "joke",
     "expected_boundary_behavior": "provocation_disrespect_no_hard_boundary",
     "no_response": false,
-    "ideal_response": null,
+    "ideal_response": "pavydi, nes nedirbsi? 😂",
     "acceptable_alternatives": [],
     "unacceptable_actions": [],
     "unacceptable_expressions": [
@@ -93,8 +93,8 @@
       "performative confidence about not needing validation",
       "artificially aggressive queen or baddie response"
     ],
-    "confidence": 0.6,
-    "notes": "Prediction test. JOKE is the model prediction pending user calibration; IGNORE and PUSH_BACK remain plausible alternatives. High confidence applies only to the user-confirmed NOT_ME constraints. This record must not be promoted into personality truth without feedback.",
+    "confidence": 1.0,
+    "notes": "User confirmed the predicted JOKE action as ME and supplied a better expression that reverses the provocateur's frame without defending or proving anything. IGNORE can still be authentic in another state or situation. This is case-level evidence, not a global provocation rule.",
     "category": "annoying_boundary_pressure"
   }
 ]

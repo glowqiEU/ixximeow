@@ -73,14 +73,18 @@ def test_second_case_accepts_expression_set_without_single_best() -> None:
     assert all(signal.inferred_lesson is None for signal in case_signals)
 
 
-def test_third_case_preserves_prediction_uncertainty_without_learning_signal() -> None:
+def test_third_case_preserves_calibrated_expression_without_global_lesson() -> None:
     root = Path(__file__).parent.parent / "personality_benchmark/data"
     cases = {case.id: case for case in load_real_cases(root / "real_cases.json")}
     signals = load_learning_signals(path=root / "learning_signals.json")
     case = cases["real-snapchat-stranger-work-provocation-003"]
+    case_signals = [signal for signal in signals if signal.case_id == case.id]
 
     assert case.expected_action is BehaviorAction.JOKE
-    assert case.confidence == 0.6
+    assert case.confidence == 1.0
+    assert case.ideal_response == "pavydi, nes nedirbsi? 😂"
     assert case.acceptable_alternatives == ()
-    assert "pending user calibration" in case.notes
-    assert all(signal.case_id != case.id for signal in signals)
+    assert [signal.rating for signal in case_signals] == ["close", "close", "close"]
+    assert all(signal.correction == case.ideal_response for signal in case_signals)
+    assert all(signal.inferred_lesson is None for signal in case_signals)
+    assert "not a global provocation rule" in case.notes
